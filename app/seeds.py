@@ -1,5 +1,5 @@
+import os
 import click
-from flask import current_app
 from flask.cli import with_appcontext
 from app import db
 from app.models import Category, Game
@@ -48,7 +48,7 @@ ACTIVE_GAMES = [
     },
 ]
 
-# Each entry: (game data, category name, rank within that category)
+# (game data, category name, rank)
 BACKLOG_GAMES = [
     (
         {
@@ -125,10 +125,30 @@ BACKLOG_GAMES = [
 ]
 
 
+def _rawg_meta(name):
+    """Fetch RAWG metadata for a game by name. Returns {} silently on failure."""
+    if not os.environ.get("RAWG_API_KEY"):
+        return {}
+    try:
+        from app.utils.rawg import search_games, extract_metadata
+        results = search_games(name, page_size=1)
+        if results:
+            return extract_metadata(results[0])
+    except Exception as e:
+        click.echo(f"  RAWG lookup failed for '{name}': {e}", err=True)
+    return {}
+
+
 @click.command("seed")
 @with_appcontext
 def seed_command():
     """Wipe and re-seed the database with example data."""
+    use_rawg = bool(os.environ.get("RAWG_API_KEY"))
+    if use_rawg:
+        click.echo("RAWG key found — cover art will be fetched.")
+    else:
+        click.echo("No RAWG key — seeding without cover art.")
+
     click.echo("Clearing existing data...")
     db.session.execute(db.text("SET FOREIGN_KEY_CHECKS=0"))
     Game.query.delete()
@@ -142,15 +162,19 @@ def seed_command():
         c = Category(name=name)
         db.session.add(c)
         cats[name] = c
-    db.session.flush()  # get IDs without committing
+    db.session.flush()
 
     click.echo("Creating active games...")
     for data in ACTIVE_GAMES:
-        db.session.add(Game(**data))
+        click.echo(f"  {data['name']}...")
+        meta = _rawg_meta(data["name"])
+        db.session.add(Game(**{**data, **meta}))
 
     click.echo("Creating backlog games...")
     for data, cat_name, rank in BACKLOG_GAMES:
-        db.session.add(Game(**data, rank=rank, category_id=cats[cat_name].id))
+        click.echo(f"  {data['name']}...")
+        meta = _rawg_meta(data["name"])
+        db.session.add(Game(**{**data, **meta, "rank": rank, "category_id": cats[cat_name].id}))
 
     db.session.commit()
     click.echo(f"Done. {len(ACTIVE_GAMES)} active, {len(BACKLOG_GAMES)} backlog games seeded.")
