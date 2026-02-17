@@ -11,6 +11,8 @@ def create_app(config_name="default"):
 
     db.init_app(app)
 
+    from app import models  # noqa: F401 — registers models with SQLAlchemy metadata
+
     from app.blueprints.main import main_bp
     from app.blueprints.playing import playing_bp
     from app.blueprints.backlog import backlog_bp
