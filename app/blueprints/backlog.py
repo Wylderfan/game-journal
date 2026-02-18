@@ -116,6 +116,17 @@ def categories():
     return render_template("backlog/categories.html", categories=all_cats)
 
 
+@backlog_bp.route("/categories/<int:cat_id>/rename", methods=["POST"])
+def rename_category(cat_id):
+    cat = db.get_or_404(Category, cat_id)
+    name = request.form.get("name", "").strip()
+    if name:
+        cat.name = name
+        db.session.commit()
+        flash(f"Category renamed to '{name}'.", "success")
+    return redirect(url_for("backlog.categories"))
+
+
 @backlog_bp.route("/categories/<int:cat_id>/delete", methods=["POST"])
 def delete_category(cat_id):
     cat = db.get_or_404(Category, cat_id)
