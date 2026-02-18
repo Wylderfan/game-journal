@@ -24,7 +24,14 @@ def index():
         Game.query.filter_by(section="active", status="On Hold")
         .order_by(Game.name).all()
     )
-    return render_template("playing/index.html", playing=playing, on_hold=on_hold)
+    archived = (
+        Game.query.filter(
+            Game.section == "active",
+            Game.status.in_(["Dropped", "Completed"]),
+        )
+        .order_by(Game.status, Game.name).all()
+    )
+    return render_template("playing/index.html", playing=playing, on_hold=on_hold, archived=archived)
 
 
 @playing_bp.route("/<int:game_id>")
@@ -98,7 +105,7 @@ def set_status(game_id):
     if new_status in STATUSES:
         game.status = new_status
         db.session.commit()
-    return redirect(url_for("playing.index"))
+    return redirect(url_for("playing.detail", game_id=game_id))
 
 
 @playing_bp.route("/<int:game_id>/delete", methods=["POST"])
