@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Add to Backlog — Game Journal{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+  <h1 class="text-2xl font-bold mb-6">Add to Backlog</h1>
+
+  <form method="post" action="{{ url_for('backlog.add') }}">
+
+    <!-- RAWG search -->
+    <div class="mb-5">
+      <label class="block text-sm text-gray-400 mb-1">Search RAWG (optional)</label>
+      <div class="flex gap-2">
+        <input id="rawg-search" type="text" placeholder="Search by title…"
+               class="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <button type="button" onclick="doSearch()"
+                class="px-4 py-2 bg-indigo-700 hover:bg-indigo-600 rounded text-sm transition-colors">
+          Search
+        </button>
+      </div>
+      <div id="rawg-results" class="hidden mt-1 bg-gray-800 border border-gray-700 rounded divide-y divide-gray-700"></div>
+    </div>
+
+    <!-- Cover preview -->
+    <div id="cover-preview" class="hidden mb-5">
+      <img id="cover-img" src="" alt="Cover art" class="w-24 h-32 object-cover rounded">
+    </div>
+
+    <!-- Hidden RAWG metadata -->
+    <input type="hidden" name="rawg_id"      id="rawg_id">
+    <input type="hidden" name="cover_url"    id="cover_url">
+    <input type="hidden" name="release_year" id="release_year">
+    <input type="hidden" name="genres"       id="genres">
+    <input type="hidden" name="platforms"    id="platforms">
+
+    <!-- Name -->
+    <div class="mb-4">
+      <label class="block text-sm text-gray-400 mb-1" for="name">Game name <span class="text-red-400">*</span></label>
+      <input id="name" name="name" type="text" required
+             class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+    </div>
+
+    <!-- Category -->
+    <div class="mb-6">
+      <label class="block text-sm text-gray-400 mb-1" for="category_id">Category</label>
+      <select id="category_id" name="category_id"
+              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <option value="">— Uncategorized —</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}">{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+      <p class="text-xs text-gray-600 mt-1">
+        <a href="{{ url_for('backlog.categories') }}" class="hover:text-gray-400">Manage categories →</a>
+      </p>
+    </div>
+
+    <div class="flex gap-3">
+      <button type="submit"
+              class="px-5 py-2 bg-indigo-700 hover:bg-indigo-600 rounded text-sm font-medium transition-colors">
+        Add to backlog
+      </button>
+      <a href="{{ url_for('backlog.index') }}"
+         class="px-5 py-2 bg-gray-800 hover:bg-gray-700 rounded text-sm transition-colors">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+
+<script>
+function doSearch() {
+  var q = document.getElementById('rawg-search').value.trim();
+  if (!q) return;
+  fetch('/api/games/search?q=' + encodeURIComponent(q))
+    .then(function(r) { return r.json(); })
+    .then(function(results) {
+      var box = document.getElementById('rawg-results');
+      box.innerHTML = '';
+      if (!results.length) {
+        box.innerHTML = '<p class="text-sm text-gray-500 px-3 py-2">No results.</p>';
+        box.classList.remove('hidden');
+        return;
+      }
+      results.forEach(function(g) {
+        var div = document.createElement('div');
+        div.className = 'flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-700 transition-colors';
+        div.innerHTML =
+          (g.cover_url ? '<img src="' + g.cover_url + '" class="w-8 h-10 object-cover rounded shrink-0">' : '<div class="w-8 h-10 bg-gray-700 rounded shrink-0"></div>') +
+          '<div class="min-w-0"><p class="text-sm font-medium truncate">' + g.name + '</p>' +
+          (g.release_year ? '<p class="text-xs text-gray-500">' + g.release_year + '</p>' : '') + '</div>';
+        div.addEventListener('click', function() { fillFromRawg(g); });
+        box.appendChild(div);
+      });
+      box.classList.remove('hidden');
+    });
+}
+
+function fillFromRawg(g) {
+  document.getElementById('name').value         = g.name;
+  document.getElementById('rawg_id').value      = g.id || '';
+  document.getElementById('cover_url').value    = g.cover_url || '';
+  document.getElementById('release_year').value = g.release_year || '';
+  document.getElementById('genres').value       = g.genres || '';
+  document.getElementById('platforms').value    = g.platforms || '';
+  if (g.cover_url) {
+    document.getElementById('cover-img').src = g.cover_url;
+    document.getElementById('cover-preview').classList.remove('hidden');
+  }
+  document.getElementById('rawg-results').classList.add('hidden');
+  document.getElementById('rawg-search').value = '';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#rawg-results') && e.target.id !== 'rawg-search') {
+    document.getElementById('rawg-results').classList.add('hidden');
+  }
+});
+
+document.getElementById('rawg-search').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+});
+</script>
+{% endblock %}

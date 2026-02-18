@@ -2,6 +2,57 @@
 {% block title %}Dashboard — Game Journal{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-6">Dashboard</h1>
-<p class="text-gray-400">Coming soon.</p>
+<h1 class="text-2xl font-bold mb-8">Dashboard</h1>
+
+<!-- Stat cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+  <div class="bg-gray-900 rounded-xl p-5 flex flex-col gap-1">
+    <span class="text-3xl font-bold text-green-400">{{ playing_count }}</span>
+    <span class="text-sm text-gray-400">Playing</span>
+  </div>
+  <div class="bg-gray-900 rounded-xl p-5 flex flex-col gap-1">
+    <span class="text-3xl font-bold text-yellow-400">{{ on_hold_count }}</span>
+    <span class="text-sm text-gray-400">On Hold</span>
+  </div>
+  <div class="bg-gray-900 rounded-xl p-5 flex flex-col gap-1">
+    <span class="text-3xl font-bold text-blue-400">{{ backlog_count }}</span>
+    <span class="text-sm text-gray-400">In Backlog</span>
+  </div>
+  <div class="bg-gray-900 rounded-xl p-5 flex flex-col gap-1">
+    <span class="text-3xl font-bold text-purple-400">{{ completed_count }}</span>
+    <span class="text-sm text-gray-400">Completed</span>
+  </div>
+</div>
+
+<!-- Top backlog picks -->
+{% if top_backlog %}
+<section>
+  <h2 class="text-lg font-semibold text-gray-300 mb-4">Top Backlog Picks</h2>
+  <div class="flex flex-col gap-2">
+    {% for game in top_backlog %}
+    <div class="bg-gray-900 rounded-lg flex items-center gap-4 px-4 py-3">
+      {% if game.cover_url %}
+        <img src="{{ game.cover_url }}" alt="{{ game.name }}"
+             class="w-10 h-14 object-cover rounded shrink-0">
+      {% else %}
+        <div class="w-10 h-14 bg-gray-800 rounded shrink-0"></div>
+      {% endif %}
+      <div class="flex-1 min-w-0">
+        <p class="font-medium truncate">{{ game.name }}</p>
+        {% if game.category %}
+          <p class="text-xs text-gray-500">{{ game.category.name }}</p>
+        {% endif %}
+      </div>
+      <form method="post" action="{{ url_for('backlog.promote', game_id=game.id) }}">
+        <button class="text-xs px-3 py-1.5 rounded bg-indigo-700 hover:bg-indigo-600 text-white transition-colors">
+          Play next
+        </button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+  <p class="text-gray-500">Backlog is empty. <a href="{{ url_for('backlog.add') }}" class="text-indigo-400 hover:underline">Add a game.</a></p>
+{% endif %}
 {% endblock %}
