@@ -27,6 +27,12 @@ def index():
     return render_template("playing/index.html", playing=playing, on_hold=on_hold)
 
 
+@playing_bp.route("/<int:game_id>")
+def detail(game_id):
+    game = db.get_or_404(Game, game_id)
+    return render_template("playing/detail.html", game=game, statuses=STATUSES)
+
+
 @playing_bp.route("/add", methods=["GET", "POST"])
 def add():
     if request.method == "POST":
