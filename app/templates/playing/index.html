@@ -2,6 +2,107 @@
 {% block title %}Playing — Game Journal{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-6">Active Library</h1>
-<p class="text-gray-400">Coming soon.</p>
+<h1 class="text-2xl font-bold mb-8">Active Library</h1>
+
+{% macro stars(value, max=5) %}
+  <span class="text-yellow-400 tracking-tight">
+    {% for i in range(1, max + 1) %}
+      {% if value and i <= value %}★{% else %}<span class="text-gray-600">★</span>{% endif %}
+    {% endfor %}
+  </span>
+{% endmacro %}
+
+{% macro status_badge(status) %}
+  {% if status == "Playing" %}
+    <span class="px-2 py-0.5 rounded text-xs font-semibold bg-green-800 text-green-200">Playing</span>
+  {% elif status == "On Hold" %}
+    <span class="px-2 py-0.5 rounded text-xs font-semibold bg-yellow-800 text-yellow-200">On Hold</span>
+  {% elif status == "Dropped" %}
+    <span class="px-2 py-0.5 rounded text-xs font-semibold bg-red-900 text-red-300">Dropped</span>
+  {% elif status == "Completed" %}
+    <span class="px-2 py-0.5 rounded text-xs font-semibold bg-blue-900 text-blue-200">Completed</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro game_card(game) %}
+<div class="bg-gray-900 rounded-xl overflow-hidden flex flex-col shadow-lg">
+  <!-- Cover art -->
+  <div class="relative w-full aspect-[3/4] bg-gray-800">
+    {% if game.cover_url %}
+      <img src="{{ game.cover_url }}"
+           alt="{{ game.name }} cover"
+           class="w-full h-full object-cover">
+    {% else %}
+      <div class="w-full h-full flex items-center justify-center text-gray-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+    {% endif %}
+    <div class="absolute top-2 left-2">
+      {{ status_badge(game.status) }}
+    </div>
+  </div>
+
+  <!-- Info -->
+  <div class="p-4 flex flex-col gap-2 flex-1">
+    <h2 class="font-semibold text-base leading-tight">{{ game.name }}</h2>
+
+    {% if game.release_year %}
+      <p class="text-xs text-gray-500">{{ game.release_year }}</p>
+    {% endif %}
+
+    <div class="flex flex-col gap-1 text-xs text-gray-400">
+      <div class="flex items-center gap-2">
+        <span class="w-16 shrink-0">Enjoyment</span>
+        {{ stars(game.enjoyment) }}
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-16 shrink-0">Motivation</span>
+        {{ stars(game.motivation) }}
+      </div>
+    </div>
+
+    {% if game.notes %}
+      <p class="text-xs text-gray-400 line-clamp-3 mt-1">{{ game.notes }}</p>
+    {% endif %}
+
+    {% if game.genres %}
+      <p class="text-xs text-gray-600 mt-auto pt-2">{{ game.genres }}</p>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+<!-- Playing now -->
+{% if playing %}
+<section class="mb-10">
+  <h2 class="text-lg font-semibold text-green-400 mb-4">Playing Now</h2>
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    {% for game in playing %}
+      {{ game_card(game) }}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- On Hold -->
+{% if on_hold %}
+<section>
+  <h2 class="text-lg font-semibold text-yellow-400 mb-4">On Hold</h2>
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    {% for game in on_hold %}
+      {{ game_card(game) }}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if not playing and not on_hold %}
+<p class="text-gray-500">No active games yet.</p>
+{% endif %}
+
 {% endblock %}

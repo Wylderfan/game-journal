@@ -21,4 +21,7 @@ def create_app(config_name="default"):
     app.register_blueprint(playing_bp, url_prefix="/playing")
     app.register_blueprint(backlog_bp, url_prefix="/backlog")
 
+    from app.seeds import seed_command
+    app.cli.add_command(seed_command)
+
     return app
