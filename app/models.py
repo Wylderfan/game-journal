@@ -5,47 +5,105 @@ from app import db
 class Category(db.Model):
     __tablename__ = "categories"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), nullable=False)
 
-    games = db.relationship("Game", backref="category", lazy=True)
+    # One category → many games, ordered by backlog rank.
+    # back_populates mirrors Game.category so both sides are explicit.
+    games = db.relationship(
+        "Game",
+        back_populates="category",
+        order_by="Game.rank",
+        lazy="select",
+    )
 
-    def __repr__(self):
-        return f"<Category {self.name}>"
+    def __repr__(self) -> str:
+        return f"<Category {self.name!r}>"
 
 
 class Game(db.Model):
     __tablename__ = "games"
 
-    # --- Core fields ---
-    id = db.Column(db.Integer, primary_key=True)
+    # ------------------------------------------------------------------ #
+    # Core identity                                                        #
+    # ------------------------------------------------------------------ #
+    id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(200), nullable=False)
-    section = db.Column(db.Enum("active", "backlog"), nullable=False)
+
+    # Which half of the app this game lives in.
+    section = db.Column(
+        db.Enum("active", "backlog", name="section_enum"),
+        nullable=False,
+    )
+
+    # Lifecycle status — only meaningful for active games.
     status = db.Column(
-        db.Enum("Playing", "On Hold", "Dropped", "Completed"), nullable=True
+        db.Enum("Playing", "On Hold", "Dropped", "Completed", name="status_enum"),
+        nullable=True,
     )
 
-    # --- Personal tracking ---
-    enjoyment = db.Column(db.Integer, nullable=True)   # 1–5
-    motivation = db.Column(db.Integer, nullable=True)  # 1–5
-    notes = db.Column(db.Text, nullable=True)
+    # ------------------------------------------------------------------ #
+    # Personal tracking                                                    #
+    # ------------------------------------------------------------------ #
+    enjoyment  = db.Column(db.Integer, nullable=True)   # 1–5; null = unrated
+    motivation = db.Column(db.Integer, nullable=True)   # 1–5; null = unrated
+    notes      = db.Column(db.Text,    nullable=True)
 
-    # --- Backlog ordering ---
-    rank = db.Column(db.Integer, default=0)
-    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=True)
+    # ------------------------------------------------------------------ #
+    # Backlog ordering                                                     #
+    # ------------------------------------------------------------------ #
+    rank = db.Column(db.Integer, nullable=False, default=0)
 
-    # --- RAWG metadata (populated at add time, never required) ---
-    rawg_id = db.Column(db.Integer, nullable=True)
-    cover_url = db.Column(db.String(500), nullable=True)
-    release_year = db.Column(db.Integer, nullable=True)
-    genres = db.Column(db.String(200), nullable=True)      # comma-separated, e.g. "RPG, Action"
-    platforms = db.Column(db.String(300), nullable=True)   # comma-separated, e.g. "PC, PS5"
+    # SET NULL so deleting a category orphans its games rather than
+    # raising a foreign-key violation.
+    category_id = db.Column(
+        db.Integer,
+        db.ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    category = db.relationship("Category", back_populates="games")
 
-    # --- Timestamps ---
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # ------------------------------------------------------------------ #
+    # RAWG metadata (optional — populated at add time via API lookup)     #
+    # ------------------------------------------------------------------ #
+    rawg_id      = db.Column(db.Integer,     nullable=True)
+    cover_url    = db.Column(db.String(500), nullable=True)
+    release_year = db.Column(db.Integer,     nullable=True)
+    genres       = db.Column(db.String(200), nullable=True)   # "RPG, Action"
+    platforms    = db.Column(db.String(300), nullable=True)   # "PC, PS5"
+
+    # ------------------------------------------------------------------ #
+    # Timestamps                                                           #
+    # ------------------------------------------------------------------ #
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
     )
 
-    def __repr__(self):
-        return f"<Game {self.name}>"
+    # ------------------------------------------------------------------ #
+    # Helpers                                                              #
+    # ------------------------------------------------------------------ #
+    def to_dict(self) -> dict:
+        """Serialise to a plain dict for JSON responses (e.g. reorder, search)."""
+        return {
+            "id":           self.id,
+            "name":         self.name,
+            "section":      self.section,
+            "status":       self.status,
+            "enjoyment":    self.enjoyment,
+            "motivation":   self.motivation,
+            "notes":        self.notes,
+            "rank":         self.rank,
+            "category_id":  self.category_id,
+            "rawg_id":      self.rawg_id,
+            "cover_url":    self.cover_url,
+            "release_year": self.release_year,
+            "genres":       self.genres,
+            "platforms":    self.platforms,
+        }
+
+    def __repr__(self) -> str:
+        return f"<Game {self.name!r} [{self.section}/{self.status}]>"
