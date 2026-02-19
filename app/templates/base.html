@@ -12,11 +12,11 @@
   <nav class="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-6">
     <span class="font-bold text-lg tracking-tight">Game Journal</span>
     <a href="{{ url_for('main.index') }}"
-       class="text-sm text-gray-400 hover:text-white transition-colors">Dashboard</a>
+       class="text-sm transition-colors {{ 'text-white font-medium' if request.path == '/' else 'text-gray-400 hover:text-white' }}">Dashboard</a>
     <a href="{{ url_for('playing.index') }}"
-       class="text-sm text-gray-400 hover:text-white transition-colors">Playing</a>
+       class="text-sm transition-colors {{ 'text-white font-medium' if request.path.startswith('/playing') else 'text-gray-400 hover:text-white' }}">Playing</a>
     <a href="{{ url_for('backlog.index') }}"
-       class="text-sm text-gray-400 hover:text-white transition-colors">Backlog</a>
+       class="text-sm transition-colors {{ 'text-white font-medium' if request.path.startswith('/backlog') else 'text-gray-400 hover:text-white' }}">Backlog</a>
   </nav>
 
   <main class="px-6 py-8 max-w-5xl mx-auto">
