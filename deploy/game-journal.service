@@ -1,0 +1,16 @@
+[Unit]
+Description=Game Journal
+After=network.target
+
+[Service]
+User=<your-linux-user>
+WorkingDirectory=/path/to/game-journal
+EnvironmentFile=/path/to/game-journal/.env
+ExecStart=/path/to/game-journal/.venv/bin/gunicorn \
+    -w 2 \
+    -b <tailscale-ip>:<port> \
+    "app:create_app()"
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
