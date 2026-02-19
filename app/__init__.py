@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from config import config
@@ -5,7 +6,9 @@ from config import config
 db = SQLAlchemy()
 
 
-def create_app(config_name="default"):
+def create_app(config_name=None):
+    if config_name is None:
+        config_name = os.environ.get("FLASK_ENV", "development")
     app = Flask(__name__)
     app.config.from_object(config[config_name])
 
