@@ -62,9 +62,14 @@ def add():
             platforms=request.form.get("platforms") or None,
         )
         db.session.add(game)
-        db.session.commit()
-        flash(f"'{game.name}' added to active library.", "success")
-        return redirect(url_for("playing.index"))
+        try:
+            db.session.commit()
+            flash(f"'{game.name}' added to active library.", "success")
+            return redirect(url_for("playing.index"))
+        except Exception:
+            db.session.rollback()
+            flash("Something went wrong. Please try again.", "error")
+            return redirect(url_for("playing.add"))
 
     return render_template("playing/form.html", game=None, statuses=STATUSES)
 
@@ -91,9 +96,14 @@ def edit(game_id):
         game.genres       = request.form.get("genres")    or game.genres
         game.platforms    = request.form.get("platforms") or game.platforms
 
-        db.session.commit()
-        flash(f"'{game.name}' updated.", "success")
-        return redirect(url_for("playing.index"))
+        try:
+            db.session.commit()
+            flash(f"'{game.name}' updated.", "success")
+            return redirect(url_for("playing.index"))
+        except Exception:
+            db.session.rollback()
+            flash("Something went wrong. Please try again.", "error")
+            return redirect(url_for("playing.edit", game_id=game_id))
 
     return render_template("playing/form.html", game=game, statuses=STATUSES)
 
@@ -104,7 +114,11 @@ def set_status(game_id):
     new_status = request.form.get("status")
     if new_status in STATUSES:
         game.status = new_status
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            flash("Status update failed.", "error")
     return redirect(url_for("playing.detail", game_id=game_id))
 
 
@@ -113,6 +127,11 @@ def delete(game_id):
     game = db.get_or_404(Game, game_id)
     name = game.name
     db.session.delete(game)
-    db.session.commit()
-    flash(f"'{name}' removed.", "success")
-    return redirect(url_for("playing.index"))
+    try:
+        db.session.commit()
+        flash(f"'{name}' removed.", "success")
+        return redirect(url_for("playing.index"))
+    except Exception:
+        db.session.rollback()
+        flash("Could not remove the game. Please try again.", "error")
+        return redirect(url_for("playing.detail", game_id=game_id))

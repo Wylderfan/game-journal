@@ -60,9 +60,14 @@ def add():
             platforms=request.form.get("platforms") or None,
         )
         db.session.add(game)
-        db.session.commit()
-        flash(f"'{game.name}' added to backlog.", "success")
-        return redirect(url_for("backlog.index"))
+        try:
+            db.session.commit()
+            flash(f"'{game.name}' added to backlog.", "success")
+            return redirect(url_for("backlog.index"))
+        except Exception:
+            db.session.rollback()
+            flash("Something went wrong. Please try again.", "error")
+            return redirect(url_for("backlog.add"))
 
     return render_template("backlog/add.html", categories=categories)
 
@@ -74,10 +79,14 @@ def reorder():
     if not data or not isinstance(data, list):
         return jsonify({"error": "invalid payload"}), 400
 
-    for rank, game_id in enumerate(data):
-        Game.query.filter_by(id=game_id).update({"rank": rank})
-    db.session.commit()
-    return jsonify({"ok": True})
+    try:
+        for rank, game_id in enumerate(data):
+            Game.query.filter_by(id=game_id).update({"rank": rank})
+        db.session.commit()
+        return jsonify({"ok": True})
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "reorder failed"}), 500
 
 
 @backlog_bp.route("/<int:game_id>/promote", methods=["POST"])
@@ -87,9 +96,14 @@ def promote(game_id):
     game.status      = "Playing"
     game.rank        = 0
     game.category_id = None
-    db.session.commit()
-    flash(f"'{game.name}' promoted to active library.", "success")
-    return redirect(url_for("playing.index"))
+    try:
+        db.session.commit()
+        flash(f"'{game.name}' promoted to active library.", "success")
+        return redirect(url_for("playing.index"))
+    except Exception:
+        db.session.rollback()
+        flash("Could not promote the game. Please try again.", "error")
+        return redirect(url_for("backlog.index"))
 
 
 @backlog_bp.route("/<int:game_id>/delete", methods=["POST"])
@@ -97,8 +111,12 @@ def delete(game_id):
     game = db.get_or_404(Game, game_id)
     name = game.name
     db.session.delete(game)
-    db.session.commit()
-    flash(f"'{name}' removed from backlog.", "success")
+    try:
+        db.session.commit()
+        flash(f"'{name}' removed from backlog.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Could not remove the game. Please try again.", "error")
     return redirect(url_for("backlog.index"))
 
 
@@ -108,8 +126,12 @@ def categories():
         name = request.form.get("name", "").strip()
         if name:
             db.session.add(Category(name=name))
-            db.session.commit()
-            flash(f"Category '{name}' created.", "success")
+            try:
+                db.session.commit()
+                flash(f"Category '{name}' created.", "success")
+            except Exception:
+                db.session.rollback()
+                flash("Could not create category. Please try again.", "error")
         return redirect(url_for("backlog.categories"))
 
     all_cats = Category.query.order_by(Category.name).all()
@@ -122,8 +144,12 @@ def rename_category(cat_id):
     name = request.form.get("name", "").strip()
     if name:
         cat.name = name
-        db.session.commit()
-        flash(f"Category renamed to '{name}'.", "success")
+        try:
+            db.session.commit()
+            flash(f"Category renamed to '{name}'.", "success")
+        except Exception:
+            db.session.rollback()
+            flash("Could not rename category. Please try again.", "error")
     return redirect(url_for("backlog.categories"))
 
 
@@ -132,6 +158,10 @@ def delete_category(cat_id):
     cat = db.get_or_404(Category, cat_id)
     name = cat.name
     db.session.delete(cat)
-    db.session.commit()
-    flash(f"Category '{name}' deleted. Its games are now uncategorized.", "success")
+    try:
+        db.session.commit()
+        flash(f"Category '{name}' deleted. Its games are now uncategorized.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Could not delete category. Please try again.", "error")
     return redirect(url_for("backlog.categories"))
