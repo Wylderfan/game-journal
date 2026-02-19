@@ -12,13 +12,9 @@ def index():
     backlog_count   = Game.query.filter_by(section="backlog").count()
     completed_count = Game.query.filter_by(status="Completed").count()
 
-    top_backlog = (
-        Game.query
-        .filter_by(section="backlog")
-        .order_by(Game.rank)
-        .limit(5)
-        .all()
-    )
+    # Top-ranked game per category (relationship already orders by rank)
+    categories = Category.query.order_by(Category.name).all()
+    top_backlog = [cat.games[0] for cat in categories if cat.games]
 
     return render_template(
         "main/index.html",
