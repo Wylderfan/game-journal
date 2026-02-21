@@ -93,6 +93,7 @@ def checkin(game_id):
     game = db.get_or_404(Game, game_id)
 
     new_status = request.form.get("status") or None
+    new_hype   = _int(request.form.get("hype"))
 
     checkin_obj = CheckIn(
         game_id=game_id,
@@ -103,6 +104,8 @@ def checkin(game_id):
 
     if new_status in STATUSES:
         game.status = new_status
+    if new_hype is not None:
+        game.hype = new_hype
     if request.form.get("finished"):
         game.finished         = True
         game.overall_rating   = _int(request.form.get("overall_rating"))

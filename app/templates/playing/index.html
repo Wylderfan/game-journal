@@ -135,6 +135,18 @@
 
     <form id="checkin-form" method="post" class="flex flex-col gap-4">
 
+      <!-- Motivation -->
+      <div>
+        <label class="text-xs text-gray-400 block mb-1">Motivation (optional)</label>
+        <div class="flex gap-1" id="modal-hype-stars">
+          {% for i in range(1, 6) %}
+            <button type="button" data-group="modal-hype" data-val="{{ i }}"
+                    class="star-btn text-2xl text-gray-600 hover:text-yellow-300 transition-colors">★</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="hype" id="modal-hype-val">
+      </div>
+
       <!-- Hours -->
       <div>
         <label class="text-xs text-gray-400 block mb-1">Hours this session</label>
@@ -243,6 +255,7 @@ function openCheckinModal(action, gameName) {
   // Reset form
   document.getElementById('checkin-form').action = action;
   document.getElementById('checkin-modal-game').textContent = gameName;
+  document.getElementById('modal-hype-val').value = '';
   document.getElementById('modal-hours').value  = '';
   document.getElementById('modal-status').value = '';
   document.getElementById('modal-note').value   = '';
