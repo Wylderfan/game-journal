@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from app import db
-from app.models import Game, CheckIn, STATUSES
+from app.models import Game, Category, CheckIn, STATUSES
 from app.utils.helpers import _int, _float
 
 playing_bp = Blueprint("playing", __name__)
@@ -34,6 +34,8 @@ def detail(game_id):
 
 @playing_bp.route("/add", methods=["GET", "POST"])
 def add():
+    categories = Category.query.order_by(Category.rank, Category.name).all()
+
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         if not name:
@@ -54,6 +56,9 @@ def add():
             platforms=request.form.get("platforms") or None,
         )
         db.session.add(game)
+        cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
+        if cat_ids:
+            game.categories = Category.query.filter(Category.id.in_(cat_ids)).all()
         try:
             db.session.commit()
             flash(f"'{game.name}' added to active library.", "success")
@@ -63,12 +68,13 @@ def add():
             flash("Something went wrong. Please try again.", "error")
             return redirect(url_for("playing.add"))
 
-    return render_template("playing/form.html", game=None, statuses=STATUSES)
+    return render_template("playing/form.html", game=None, statuses=STATUSES, categories=categories)
 
 
 @playing_bp.route("/<int:game_id>/edit", methods=["GET", "POST"])
 def edit(game_id):
     game = db.get_or_404(Game, game_id)
+    categories = Category.query.order_by(Category.rank, Category.name).all()
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -88,6 +94,9 @@ def edit(game_id):
         game.genres       = request.form.get("genres")    or game.genres
         game.platforms    = request.form.get("platforms") or game.platforms
 
+        cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
+        game.categories = Category.query.filter(Category.id.in_(cat_ids)).all() if cat_ids else []
+
         try:
             db.session.commit()
             flash(f"'{game.name}' updated.", "success")
@@ -97,7 +106,7 @@ def edit(game_id):
             flash("Something went wrong. Please try again.", "error")
             return redirect(url_for("playing.edit", game_id=game_id))
 
-    return render_template("playing/form.html", game=game, statuses=STATUSES)
+    return render_template("playing/form.html", game=game, statuses=STATUSES, categories=categories)
 
 
 @playing_bp.route("/<int:game_id>/status", methods=["POST"])

@@ -67,11 +67,12 @@
 {% endif %}
 
 {% for cat in categories %}
-  {% if cat.games %}
+  {% set backlog_games = cat.games | selectattr('section', 'equalto', 'backlog') | list %}
+  {% if backlog_games %}
   <section class="mb-8">
     <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{{ cat.name }}</h2>
     <ul class="flex flex-col gap-2">
-      {% for game in cat.games %}
+      {% for game in backlog_games %}
         {{ game_row(game) }}
       {% endfor %}
     </ul>

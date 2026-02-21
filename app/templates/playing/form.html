@@ -80,11 +80,28 @@
     </div>
 
     <!-- Notes -->
-    <div class="mb-6">
+    <div class="mb-4">
       <label class="block text-sm text-gray-400 mb-1" for="notes">Notes</label>
       <textarea id="notes" name="notes" rows="4"
                 class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 resize-y">{{ game.notes or '' if game else '' }}</textarea>
     </div>
+
+    <!-- Categories -->
+    {% if categories %}
+    <div class="mb-6">
+      <label class="block text-sm text-gray-400 mb-2">Categories</label>
+      <div class="flex flex-col gap-1.5">
+        {% for cat in categories %}
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" name="category_ids" value="{{ cat.id }}"
+                   {{ 'checked' if game and cat in game.categories else '' }}
+                   class="w-4 h-4 accent-indigo-500">
+            <span class="text-sm text-gray-300">{{ cat.name }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
 
     <div class="flex gap-3">
       <button type="submit"
