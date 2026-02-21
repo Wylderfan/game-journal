@@ -125,6 +125,49 @@ def play_next():
     return render_template("backlog/play_next.html", ranked=ranked, scores=scores)
 
 
+@backlog_bp.route("/<int:game_id>/edit", methods=["GET", "POST"])
+def edit(game_id):
+    game = db.get_or_404(Game, game_id)
+    categories = Category.query.order_by(Category.rank, Category.name).all()
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Game name is required.", "error")
+            return redirect(url_for("backlog.edit", game_id=game_id))
+
+        game.name              = name
+        game.notes             = request.form.get("notes", "").strip() or None
+        game.hype              = _int(request.form.get("hype"))
+        game.estimated_length  = request.form.get("estimated_length") or None
+        game.series_continuity = bool(request.form.get("series_continuity"))
+        game.mood_chill        = _int(request.form.get("mood_chill"))
+        game.mood_intense      = _int(request.form.get("mood_intense"))
+        game.mood_story        = _int(request.form.get("mood_story"))
+        game.mood_action       = _int(request.form.get("mood_action"))
+        game.mood_exploration  = _int(request.form.get("mood_exploration"))
+        # Only overwrite RAWG fields if the form sent something new
+        game.cover_url    = request.form.get("cover_url")    or game.cover_url
+        game.rawg_id      = _int(request.form.get("rawg_id")) or game.rawg_id
+        game.release_year = _int(request.form.get("release_year")) or game.release_year
+        game.genres       = request.form.get("genres")        or game.genres
+        game.platforms    = request.form.get("platforms")     or game.platforms
+
+        cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
+        game.category_id = cat_ids[0] if cat_ids else None
+
+        try:
+            db.session.commit()
+            flash(f"'{game.name}' updated.", "success")
+            return redirect(url_for("backlog.index"))
+        except Exception:
+            db.session.rollback()
+            flash("Something went wrong. Please try again.", "error")
+            return redirect(url_for("backlog.edit", game_id=game_id))
+
+    return render_template("backlog/edit.html", game=game, categories=categories)
+
+
 @backlog_bp.route("/<int:game_id>/promote", methods=["POST"])
 def promote(game_id):
     game = db.get_or_404(Game, game_id)
