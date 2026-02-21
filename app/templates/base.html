@@ -16,7 +16,9 @@
     <a href="{{ url_for('playing.index') }}"
        class="text-sm transition-colors {{ 'text-white font-medium' if request.path.startswith('/playing') else 'text-gray-400 hover:text-white' }}">Playing</a>
     <a href="{{ url_for('backlog.index') }}"
-       class="text-sm transition-colors {{ 'text-white font-medium' if request.path.startswith('/backlog') else 'text-gray-400 hover:text-white' }}">Backlog</a>
+       class="text-sm transition-colors {{ 'text-white font-medium' if request.path.startswith('/backlog') and not request.path.startswith('/backlog/play-next') else 'text-gray-400 hover:text-white' }}">Backlog</a>
+    <a href="{{ url_for('backlog.play_next') }}"
+       class="text-sm transition-colors {{ 'text-white font-medium' if request.path.startswith('/backlog/play-next') else 'text-gray-400 hover:text-white' }}">Play Next</a>
   </nav>
 
   <main class="px-6 py-8 max-w-5xl mx-auto">
