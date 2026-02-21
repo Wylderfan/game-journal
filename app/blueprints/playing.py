@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from app import db
-from app.models import Game
+from app.models import Game, CheckIn
 
 playing_bp = Blueprint("playing", __name__)
 
@@ -120,6 +120,54 @@ def set_status(game_id):
             db.session.rollback()
             flash("Status update failed.", "error")
     return redirect(url_for("playing.detail", game_id=game_id))
+
+
+@playing_bp.route("/<int:game_id>/checkin", methods=["POST"])
+def checkin(game_id):
+    game = db.get_or_404(Game, game_id)
+
+    new_status = request.form.get("status") or None
+    checkin_obj = CheckIn(
+        game_id=game_id,
+        motivation=_int(request.form.get("motivation")),
+        enjoyment=_int(request.form.get("enjoyment")),
+        note=request.form.get("note", "").strip() or None,
+        hours_played=request.form.get("hours_played") or None,
+        status=new_status if new_status in STATUSES else None,
+    )
+    if new_status in STATUSES:
+        game.status = new_status
+
+    db.session.add(checkin_obj)
+    try:
+        db.session.commit()
+        flash(f"Check-in saved for '{game.name}'.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Check-in could not be saved. Please try again.", "error")
+
+    return redirect(url_for("playing.index"))
+
+
+@playing_bp.route("/<int:game_id>/finish", methods=["GET", "POST"])
+def finish(game_id):
+    game = db.get_or_404(Game, game_id)
+
+    if request.method == "POST":
+        game.finished         = True
+        game.overall_rating   = _int(request.form.get("overall_rating"))
+        game.would_play_again = request.form.get("would_play_again") or None
+        game.hours_to_finish  = _int(request.form.get("hours_to_finish"))
+        game.difficulty       = _int(request.form.get("difficulty"))
+        try:
+            db.session.commit()
+            flash(f"'{game.name}' marked as finished.", "success")
+        except Exception:
+            db.session.rollback()
+            flash("Could not save survey. Please try again.", "error")
+        return redirect(url_for("playing.detail", game_id=game_id))
+
+    return render_template("playing/finish_survey.html", game=game)
 
 
 @playing_bp.route("/<int:game_id>/delete", methods=["POST"])
