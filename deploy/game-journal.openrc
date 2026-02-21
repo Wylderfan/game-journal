@@ -1,0 +1,20 @@
+#!/sbin/openrc-run
+
+name="game-journal"
+description="Game Journal"
+
+directory="/path/to/game-journal"
+command="/path/to/game-journal/.venv/bin/gunicorn"
+command_args="-w 2 -b <tailscale-ip>:<port> \"app:create_app()\""
+command_user="<your-linux-user>"
+command_background=yes
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+    need net
+}
+
+start_pre() {
+    # Load .env into the environment before gunicorn starts
+    export $(grep -v '^#' "${directory}/.env" | xargs)
+}

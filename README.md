@@ -115,10 +115,48 @@ python run.py
 
 ## Production
 
-Runs under Gunicorn, bound to the server's Tailscale IP only (never `0.0.0.0`):
+Runs under Gunicorn via `systemd` — do not run Gunicorn directly. The service unit at `deploy/game-journal.service` is a template; fill in the placeholders and install it on the server:
 
+**1. Fill in `deploy/game-journal.service`**
+Replace `<your-linux-user>`, `/path/to/game-journal`, and `<tailscale-ip>:<port>` with real values.
+
+**2. Install and enable the service**
 ```bash
-gunicorn -w 2 -b <tailscale-ip>:<port> "app:create_app()"
+sudo cp deploy/game-journal.service /etc/systemd/system/game-journal.service
+sudo systemctl daemon-reload
+sudo systemctl enable game-journal
+sudo systemctl start game-journal
 ```
 
-A `systemd` unit template is provided at `deploy/game-journal.service` for auto-restart on reboot. Secrets are loaded from `.env` at startup via `python-dotenv`.
+**Useful commands**
+```bash
+sudo systemctl status game-journal   # check running state
+journalctl -u game-journal           # view logs
+```
+
+systemd handles starting Gunicorn on boot and restarting it on failure. Secrets are loaded from `.env` at startup via `python-dotenv`.
+
+---
+
+### OpenRC (Gentoo)
+
+A template init script is provided at `deploy/game-journal.openrc`.
+
+**1. Fill in `deploy/game-journal.openrc`**
+Replace `<your-linux-user>`, `/path/to/game-journal`, and `<tailscale-ip>:<port>` with real values.
+
+**2. Install and enable the service**
+```bash
+sudo cp deploy/game-journal.openrc /etc/init.d/game-journal
+sudo chmod +x /etc/init.d/game-journal
+sudo rc-update add game-journal default
+sudo rc-service game-journal start
+```
+
+**Useful commands**
+```bash
+sudo rc-service game-journal status   # check running state
+sudo rc-service game-journal restart  # restart after config changes
+```
+
+The init script sources `.env` via `start_pre` before Gunicorn starts, so all environment variables are available at runtime.
