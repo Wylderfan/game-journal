@@ -17,7 +17,7 @@ def _play_next_score(game):
     Compute a priority score for play-next ordering (higher = play sooner).
 
     Factors:
-      - Hype (1–5 stars)               → 0–50 pts
+      - Motivation & Excitement (1–5)   → 0–50 pts
       - Series continuity bonus         → +25 pts
       - Estimated length (shorter wins) → 0–20 pts
       - Category rank bonus             → rank 1 = +30, rank 2 = +25 … rank 7+ = 0
@@ -116,7 +116,8 @@ def play_next():
         .all()
     )
     ranked = sorted(backlog_games + active_games, key=_play_next_score, reverse=True)
-    return render_template("backlog/play_next.html", ranked=ranked)
+    scores = {game.id: _play_next_score(game) for game in ranked}
+    return render_template("backlog/play_next.html", ranked=ranked, scores=scores)
 
 
 @backlog_bp.route("/<int:game_id>/promote", methods=["POST"])
