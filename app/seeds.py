@@ -5,11 +5,12 @@ from app import db
 from app.models import Category, Game
 
 
+# Categories in priority order (index 0 = rank 1 = most interested right now)
 CATEGORIES = [
     "Action RPG",
+    "Indie",
     "Platformer",
     "Strategy",
-    "Indie",
 ]
 
 ACTIVE_GAMES = [
@@ -48,55 +49,28 @@ ACTIVE_GAMES = [
     },
 ]
 
-# (game data, category name, rank)
+# (game data, category name)
+# Survey fields: hype (1-5), estimated_length, series_continuity,
+#                mood_chill/intense/story/action/exploration (0-5 each)
 BACKLOG_GAMES = [
     (
         {
-            "name": "Hollow Knight",
+            "name": "Baldur's Gate 3",
             "section": "backlog",
             "status": None,
-            "genres": "Action, Adventure, Indie",
-            "platforms": "PC, Switch, PS4",
-            "release_year": 2017,
+            "genres": "RPG, Strategy",
+            "platforms": "PC, PS5",
+            "release_year": 2023,
+            "hype": 5,
+            "estimated_length": "Very Long",
+            "series_continuity": False,
+            "mood_chill": 1,
+            "mood_intense": 3,
+            "mood_story": 5,
+            "mood_action": 3,
+            "mood_exploration": 4,
         },
-        "Indie",
-        1,
-    ),
-    (
-        {
-            "name": "Celeste",
-            "section": "backlog",
-            "status": None,
-            "genres": "Platformer, Indie",
-            "platforms": "PC, Switch, PS4",
-            "release_year": 2018,
-        },
-        "Platformer",
-        1,
-    ),
-    (
-        {
-            "name": "Ori and the Blind Forest",
-            "section": "backlog",
-            "status": None,
-            "genres": "Platformer, Adventure",
-            "platforms": "PC, Switch, Xbox One",
-            "release_year": 2015,
-        },
-        "Platformer",
-        2,
-    ),
-    (
-        {
-            "name": "Into the Breach",
-            "section": "backlog",
-            "status": None,
-            "genres": "Strategy, Indie",
-            "platforms": "PC, Switch",
-            "release_year": 2018,
-        },
-        "Strategy",
-        1,
+        "Action RPG",
     ),
     (
         {
@@ -106,21 +80,92 @@ BACKLOG_GAMES = [
             "genres": "RPG, Strategy",
             "platforms": "PC, PS4, Xbox One, Switch",
             "release_year": 2017,
+            "hype": 4,
+            "estimated_length": "Very Long",
+            "series_continuity": True,
+            "mood_chill": 1,
+            "mood_intense": 2,
+            "mood_story": 5,
+            "mood_action": 3,
+            "mood_exploration": 4,
         },
         "Action RPG",
-        1,
     ),
     (
         {
-            "name": "Baldur's Gate 3",
+            "name": "Hollow Knight",
             "section": "backlog",
             "status": None,
-            "genres": "RPG, Strategy",
-            "platforms": "PC, PS5",
-            "release_year": 2023,
+            "genres": "Action, Adventure, Indie",
+            "platforms": "PC, Switch, PS4",
+            "release_year": 2017,
+            "hype": 4,
+            "estimated_length": "Medium",
+            "series_continuity": False,
+            "mood_chill": 3,
+            "mood_intense": 3,
+            "mood_story": 3,
+            "mood_action": 3,
+            "mood_exploration": 5,
         },
-        "Action RPG",
-        2,
+        "Indie",
+    ),
+    (
+        {
+            "name": "Celeste",
+            "section": "backlog",
+            "status": None,
+            "genres": "Platformer, Indie",
+            "platforms": "PC, Switch, PS4",
+            "release_year": 2018,
+            "hype": 5,
+            "estimated_length": "Short",
+            "series_continuity": False,
+            "mood_chill": 1,
+            "mood_intense": 5,
+            "mood_story": 3,
+            "mood_action": 3,
+            "mood_exploration": 2,
+        },
+        "Platformer",
+    ),
+    (
+        {
+            "name": "Ori and the Blind Forest",
+            "section": "backlog",
+            "status": None,
+            "genres": "Platformer, Adventure",
+            "platforms": "PC, Switch, Xbox One",
+            "release_year": 2015,
+            "hype": 3,
+            "estimated_length": "Short",
+            "series_continuity": False,
+            "mood_chill": 3,
+            "mood_intense": 2,
+            "mood_story": 4,
+            "mood_action": 2,
+            "mood_exploration": 3,
+        },
+        "Platformer",
+    ),
+    (
+        {
+            "name": "Into the Breach",
+            "section": "backlog",
+            "status": None,
+            "genres": "Strategy, Indie",
+            "platforms": "PC, Switch",
+            "release_year": 2018,
+            "hype": 3,
+            "estimated_length": "Medium",
+            "series_continuity": False,
+            "mood_chill": 0,
+            "mood_intense": 3,
+            "mood_story": 1,
+            "mood_action": 2,
+            "mood_exploration": 1,
+        },
+        "Strategy",
     ),
 ]
 
@@ -158,8 +203,8 @@ def seed_command():
 
     click.echo("Creating categories...")
     cats = {}
-    for name in CATEGORIES:
-        c = Category(name=name)
+    for rank, name in enumerate(CATEGORIES, start=1):
+        c = Category(name=name, rank=rank)
         db.session.add(c)
         cats[name] = c
     db.session.flush()
@@ -171,10 +216,10 @@ def seed_command():
         db.session.add(Game(**{**data, **meta}))
 
     click.echo("Creating backlog games...")
-    for data, cat_name, rank in BACKLOG_GAMES:
+    for data, cat_name in BACKLOG_GAMES:
         click.echo(f"  {data['name']}...")
         meta = _rawg_meta(data["name"])
-        db.session.add(Game(**{**data, **meta, "rank": rank, "category_id": cats[cat_name].id}))
+        db.session.add(Game(**{**data, **meta, "rank": 0, "category_id": cats[cat_name].id}))
 
     db.session.commit()
     click.echo(f"Done. {len(ACTIVE_GAMES)} active, {len(BACKLOG_GAMES)} backlog games seeded.")
