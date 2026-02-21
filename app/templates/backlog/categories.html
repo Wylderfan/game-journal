@@ -19,11 +19,19 @@
     </button>
   </form>
 
-  <!-- Existing categories -->
+  <!-- Existing categories (drag to reorder priority) -->
   {% if categories %}
-  <ul class="flex flex-col gap-2">
+  <p class="text-xs text-gray-500 mb-3">Drag to set priority — top = most interested in right now. Play Next scoring reflects this order.</p>
+  <ul id="cat-list" class="flex flex-col gap-2">
     {% for cat in categories %}
-    <li class="flex items-center gap-3 bg-gray-900 rounded-lg px-4 py-3">
+    <li data-id="{{ cat.id }}"
+        class="flex items-center gap-3 bg-gray-900 rounded-lg px-4 py-3 cursor-grab active:cursor-grabbing">
+      <!-- Drag handle -->
+      <span class="text-gray-600 select-none shrink-0">⠿</span>
+
+      <!-- Priority badge -->
+      <span class="cat-rank text-xs font-mono text-gray-600 w-4 shrink-0">{{ loop.index }}</span>
+
       <form method="post" action="{{ url_for('backlog.rename_category', cat_id=cat.id) }}"
             class="flex items-center gap-2 flex-1 min-w-0">
         <input name="name" type="text" value="{{ cat.name }}" required
@@ -48,4 +56,34 @@
   <p class="text-gray-500 text-sm">No categories yet.</p>
   {% endif %}
 </div>
+
+<script>
+(function () {
+  var list = document.getElementById('cat-list');
+  if (!list) return;
+
+  function renumber() {
+    list.querySelectorAll('li').forEach(function (li, i) {
+      var badge = li.querySelector('.cat-rank');
+      if (badge) badge.textContent = i + 1;
+    });
+  }
+
+  new Sortable(list, {
+    animation: 150,
+    ghostClass: 'opacity-40',
+    onEnd: function () {
+      renumber();
+      var ids = Array.from(list.querySelectorAll('li')).map(function (li) {
+        return parseInt(li.dataset.id);
+      });
+      fetch('{{ url_for("backlog.categories_reorder") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ids),
+      });
+    },
+  });
+})();
+</script>
 {% endblock %}

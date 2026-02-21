@@ -3,9 +3,7 @@
 
 {% block content %}
 
-{# ------------------------------------------------------------------ #}
-{# Mood mini-bar macro — 5 coloured bars scaled by slider value (0–5)  #}
-{# ------------------------------------------------------------------ #}
+{# Mood mini-bar macro #}
 {% macro mood_bars(game) %}
 {% set moods = [
   (game.mood_chill,       'bg-sky-500',    'Chill'),
@@ -25,32 +23,19 @@
 {% endif %}
 {% endmacro %}
 
-{# ------------------------------------------------------------------ #}
-{# Hype stars (display only)                                           #}
-{# ------------------------------------------------------------------ #}
-{% macro hype_display(game) %}
-{% if game.hype %}
-<span class="text-xs text-yellow-400" title="Hype: {{ game.hype }}/5">
-  {% for i in range(1, 6) %}{{ '★' if i <= game.hype else '☆' }}{% endfor %}
-</span>
-{% endif %}
-{% endmacro %}
-
-<div class="flex items-center justify-between mb-6">
+<div class="flex items-center justify-between mb-2">
   <h1 class="text-2xl font-bold">Play Next</h1>
   <div class="flex gap-3 text-sm">
     <a href="{{ url_for('backlog.add') }}" class="px-4 py-1.5 bg-indigo-700 hover:bg-indigo-600 rounded transition-colors">+ Add game</a>
     <a href="{{ url_for('backlog.index') }}" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 rounded transition-colors">Backlog →</a>
   </div>
 </div>
+<p class="text-xs text-gray-500 mb-6">Ranked by hype, series progress, length, category priority, and play status. Change category priority in <a href="{{ url_for('backlog.categories') }}" class="text-indigo-400 hover:underline">Categories</a>.</p>
 
 {% if ranked %}
-<p class="text-xs text-gray-500 mb-3">Drag rows to reorder. Changes save instantly.</p>
-
-<ul id="play-next-list" class="space-y-2 mb-10">
+<ul class="space-y-2">
   {% for game in ranked %}
-  <li data-id="{{ game.id }}"
-      class="flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 cursor-grab active:cursor-grabbing select-none">
+  <li class="flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2">
 
     <!-- Rank badge -->
     <span class="text-xs font-mono text-gray-500 w-6 text-center shrink-0">#{{ loop.index }}</span>
@@ -66,8 +51,17 @@
     <div class="flex-1 min-w-0">
       <p class="text-sm font-medium truncate">{{ game.name }}</p>
       <div class="flex items-center flex-wrap gap-2 mt-0.5">
-        {% if game.category %}
-          <span class="text-xs text-gray-500 bg-gray-700 px-1.5 py-0.5 rounded">{{ game.category.name }}</span>
+        <!-- Status badge for active games -->
+        {% if game.section == 'active' %}
+          {% if game.status == 'Playing' %}
+            <span class="text-xs font-medium text-green-400 bg-green-900/40 px-1.5 py-0.5 rounded">Playing</span>
+          {% elif game.status == 'On Hold' %}
+            <span class="text-xs font-medium text-yellow-400 bg-yellow-900/40 px-1.5 py-0.5 rounded">On Hold</span>
+          {% endif %}
+        {% else %}
+          {% if game.category %}
+            <span class="text-xs text-gray-500 bg-gray-700 px-1.5 py-0.5 rounded">{{ game.category.name }}</span>
+          {% endif %}
         {% endif %}
         {% if game.estimated_length %}
           <span class="text-xs text-gray-400">{{ game.estimated_length }}</span>
@@ -75,77 +69,35 @@
         {% if game.series_continuity %}
           <span class="text-xs text-indigo-400 font-medium">Series</span>
         {% endif %}
-        {{ hype_display(game) }}
+        {% if game.hype %}
+          <span class="text-xs text-yellow-400" title="Hype: {{ game.hype }}/5">
+            {% for i in range(1, 6) %}{{ '★' if i <= game.hype else '☆' }}{% endfor %}
+          </span>
+        {% endif %}
         {{ mood_bars(game) }}
       </div>
     </div>
 
-    <!-- Promote button -->
+    <!-- Action -->
+    {% if game.section == 'backlog' %}
     <form method="post" action="{{ url_for('backlog.promote', game_id=game.id) }}" class="shrink-0">
       <button type="submit"
               class="px-3 py-1 text-xs bg-green-800 hover:bg-green-700 rounded transition-colors"
-              title="Play now">
+              title="Promote to active library">
         Play
       </button>
     </form>
+    {% else %}
+    <a href="{{ url_for('playing.detail', game_id=game.id) }}"
+       class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors shrink-0">
+      View
+    </a>
+    {% endif %}
   </li>
   {% endfor %}
 </ul>
 {% else %}
-<p class="text-gray-500 text-sm mb-10">No ranked games yet. Add a game to the backlog to get started.</p>
+<p class="text-gray-500 text-sm">Nothing to show yet. <a href="{{ url_for('backlog.add') }}" class="text-indigo-400 hover:underline">Add a game to the backlog.</a></p>
 {% endif %}
 
-{% if unranked %}
-<div class="border-t border-gray-800 pt-6">
-  <h2 class="text-sm font-semibold text-gray-400 mb-2">Unranked games
-    <span class="text-xs text-gray-600 font-normal ml-1">— added before the Play Next feature; re-add to rank them</span>
-  </h2>
-  <ul class="space-y-1.5">
-    {% for game in unranked %}
-    <li class="flex items-center gap-3 bg-gray-800/60 border border-gray-700/60 rounded-lg px-3 py-2 text-sm text-gray-400">
-      {% if game.cover_url %}
-        <img src="{{ game.cover_url }}" alt="{{ game.name }}" class="w-6 h-8 object-cover rounded shrink-0 opacity-60">
-      {% else %}
-        <div class="w-6 h-8 bg-gray-700 rounded shrink-0"></div>
-      {% endif %}
-      <span class="truncate">{{ game.name }}</span>
-      {% if game.category %}
-        <span class="text-xs text-gray-600 bg-gray-700/60 px-1.5 py-0.5 rounded ml-auto shrink-0">{{ game.category.name }}</span>
-      {% endif %}
-    </li>
-    {% endfor %}
-  </ul>
-</div>
-{% endif %}
-
-<script>
-(function () {
-  var list = document.getElementById('play-next-list');
-  if (!list) return;
-
-  // Re-number rank badges after a drag
-  function renumber() {
-    list.querySelectorAll('li').forEach(function (li, i) {
-      var badge = li.querySelector('span[class*="font-mono"]');
-      if (badge) badge.textContent = '#' + (i + 1);
-    });
-  }
-
-  new Sortable(list, {
-    animation: 150,
-    ghostClass: 'opacity-40',
-    onEnd: function () {
-      renumber();
-      var ids = Array.from(list.querySelectorAll('li')).map(function (li) {
-        return parseInt(li.dataset.id);
-      });
-      fetch('{{ url_for("backlog.play_next_reorder") }}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ids),
-      });
-    },
-  });
-})();
-</script>
 {% endblock %}

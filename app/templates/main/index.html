@@ -67,35 +67,7 @@
 </section>
 {% endif %}
 
-<!-- Top backlog picks -->
-{% if top_backlog %}
-<section>
-  <h2 class="text-lg font-semibold text-gray-300 mb-4">Top Pick per Category</h2>
-  <div class="flex flex-col gap-2">
-    {% for game in top_backlog %}
-    <div class="bg-gray-900 rounded-lg flex items-center gap-4 px-4 py-3">
-      {% if game.cover_url %}
-        <img src="{{ game.cover_url }}" alt="{{ game.name }}"
-             class="w-10 h-14 object-cover rounded shrink-0">
-      {% else %}
-        <div class="w-10 h-14 bg-gray-800 rounded shrink-0"></div>
-      {% endif %}
-      <div class="flex-1 min-w-0">
-        <p class="font-medium truncate">{{ game.name }}</p>
-        {% if game.category %}
-          <p class="text-xs text-gray-500">{{ game.category.name }}</p>
-        {% endif %}
-      </div>
-      <form method="post" action="{{ url_for('backlog.promote', game_id=game.id) }}">
-        <button class="text-xs px-3 py-1.5 rounded bg-indigo-700 hover:bg-indigo-600 text-white transition-colors">
-          Play next
-        </button>
-      </form>
-    </div>
-    {% endfor %}
-  </div>
-</section>
-{% else %}
+{% if not play_next %}
   <p class="text-gray-500">Backlog is empty. <a href="{{ url_for('backlog.add') }}" class="text-indigo-400 hover:underline">Add a game.</a></p>
 {% endif %}
 {% endblock %}

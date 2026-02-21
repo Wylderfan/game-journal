@@ -1,6 +1,6 @@
 import os
 from flask import Blueprint, render_template, jsonify, request
-from app.models import Game, Category
+from app.models import Game
 
 main_bp = Blueprint("main", __name__)
 
@@ -12,18 +12,15 @@ def index():
     backlog_count   = Game.query.filter_by(section="backlog").count()
     completed_count = Game.query.filter_by(status="Completed").count()
 
-    # Top-ranked game per category (relationship already orders by rank)
-    categories = Category.query.order_by(Category.name).all()
-    top_backlog = [cat.games[0] for cat in categories if cat.games]
-
-    # Top 5 games from the global play-next ranking
-    play_next = (
+    # Top 5 games from the dynamic play-next scoring
+    from app.blueprints.backlog import _play_next_score
+    backlog_games = Game.query.filter_by(section="backlog").all()
+    active_games = (
         Game.query
-        .filter(Game.section == "backlog", Game.play_next_rank.isnot(None))
-        .order_by(Game.play_next_rank)
-        .limit(5)
+        .filter(Game.section == "active", Game.status.in_(["Playing", "On Hold"]))
         .all()
     )
+    play_next = sorted(backlog_games + active_games, key=_play_next_score, reverse=True)[:5]
 
     return render_template(
         "main/index.html",
@@ -31,7 +28,6 @@ def index():
         on_hold_count=on_hold_count,
         backlog_count=backlog_count,
         completed_count=completed_count,
-        top_backlog=top_backlog,
         play_next=play_next,
     )
 

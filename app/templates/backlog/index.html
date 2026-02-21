@@ -17,11 +17,7 @@
 </div>
 
 {% macro game_row(game) %}
-<li data-game-id="{{ game.id }}"
-    class="flex items-center gap-3 bg-gray-900 rounded-lg px-3 py-2 cursor-grab active:cursor-grabbing group">
-  <!-- Drag handle -->
-  <span class="text-gray-600 select-none">⠿</span>
-
+<li class="flex items-center gap-3 bg-gray-900 rounded-lg px-3 py-2 group">
   <!-- Cover -->
   {% if game.cover_url %}
     <img src="{{ game.cover_url }}" alt="{{ game.name }}"
@@ -74,7 +70,7 @@
   {% if cat.games %}
   <section class="mb-8">
     <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{{ cat.name }}</h2>
-    <ul class="sortable-list flex flex-col gap-2" data-category-id="{{ cat.id }}">
+    <ul class="flex flex-col gap-2">
       {% for game in cat.games %}
         {{ game_row(game) }}
       {% endfor %}
@@ -86,29 +82,11 @@
 {% if uncategorized %}
 <section class="mb-8">
   <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Uncategorized</h2>
-  <ul class="sortable-list flex flex-col gap-2" data-category-id="">
+  <ul class="flex flex-col gap-2">
     {% for game in uncategorized %}
       {{ game_row(game) }}
     {% endfor %}
   </ul>
 </section>
 {% endif %}
-
-<script>
-document.querySelectorAll('.sortable-list').forEach(function(el) {
-  Sortable.create(el, {
-    animation: 150,
-    handle: 'li',
-    onEnd: function() {
-      var ids = Array.from(el.querySelectorAll('[data-game-id]'))
-                     .map(function(li) { return parseInt(li.dataset.gameId); });
-      fetch('/backlog/reorder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ids),
-      });
-    },
-  });
-});
-</script>
 {% endblock %}

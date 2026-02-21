@@ -7,13 +7,15 @@ class Category(db.Model):
 
     id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), nullable=False)
+    # Priority order for play-next scoring (1 = most interested in right now).
+    rank = db.Column(db.Integer, nullable=False, default=0)
 
-    # One category → many games, ordered by backlog rank.
+    # One category → many games, ordered alphabetically.
     # back_populates mirrors Game.category so both sides are explicit.
     games = db.relationship(
         "Game",
         back_populates="category",
-        order_by="Game.rank",
+        order_by="Game.name",
         lazy="select",
     )
 
