@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from app import db
-from app.models import Game, CheckIn, STATUSES
+from app.models import Game, Category, CheckIn, STATUSES
 from app.utils.helpers import _int, _float
 
 playing_bp = Blueprint("playing", __name__)
@@ -35,6 +35,7 @@ def detail(game_id):
 @playing_bp.route("/<int:game_id>/edit", methods=["GET", "POST"])
 def edit(game_id):
     game = db.get_or_404(Game, game_id)
+    categories = Category.query.order_by(Category.rank, Category.name).all()
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -42,11 +43,18 @@ def edit(game_id):
             flash("Game name is required.", "error")
             return redirect(url_for("playing.edit", game_id=game_id))
 
-        game.name       = name
-        game.status     = request.form.get("status", game.status)
-        game.enjoyment  = _int(request.form.get("enjoyment"))
-        game.motivation = _int(request.form.get("motivation"))
-        game.notes      = request.form.get("notes", "").strip() or None
+        game.name              = name
+        game.status            = request.form.get("status", game.status)
+        game.hype              = _int(request.form.get("hype"))
+        game.estimated_length  = request.form.get("estimated_length") or None
+        game.series_continuity = bool(request.form.get("series_continuity"))
+        game.mood_chill        = _int(request.form.get("mood_chill"))
+        game.mood_intense      = _int(request.form.get("mood_intense"))
+        game.mood_story        = _int(request.form.get("mood_story"))
+        game.mood_action       = _int(request.form.get("mood_action"))
+        game.mood_exploration  = _int(request.form.get("mood_exploration"))
+        game.notes             = request.form.get("notes", "").strip() or None
+        game.category_id       = _int(request.form.get("category_id"))
         # Only overwrite RAWG fields if the form sent something new
         game.cover_url    = request.form.get("cover_url")    or game.cover_url
         game.rawg_id      = _int(request.form.get("rawg_id")) or game.rawg_id
@@ -63,7 +71,7 @@ def edit(game_id):
             flash("Something went wrong. Please try again.", "error")
             return redirect(url_for("playing.edit", game_id=game_id))
 
-    return render_template("playing/form.html", game=game, statuses=STATUSES)
+    return render_template("playing/form.html", game=game, statuses=STATUSES, categories=categories)
 
 
 @playing_bp.route("/<int:game_id>/status", methods=["POST"])
@@ -84,14 +92,11 @@ def set_status(game_id):
 def checkin(game_id):
     game = db.get_or_404(Game, game_id)
 
-    new_status   = request.form.get("status") or None
-    new_enjoyment  = _int(request.form.get("enjoyment"))
-    new_motivation = _int(request.form.get("motivation"))
+    new_status = request.form.get("status") or None
+    new_hype   = _int(request.form.get("hype"))
 
     checkin_obj = CheckIn(
         game_id=game_id,
-        motivation=new_motivation,
-        enjoyment=new_enjoyment,
         note=request.form.get("note", "").strip() or None,
         hours_played=_float(request.form.get("hours_played")),
         status=new_status if new_status in STATUSES else None,
@@ -99,10 +104,8 @@ def checkin(game_id):
 
     if new_status in STATUSES:
         game.status = new_status
-    if new_enjoyment is not None:
-        game.enjoyment = new_enjoyment
-    if new_motivation is not None:
-        game.motivation = new_motivation
+    if new_hype is not None:
+        game.hype = new_hype
     if request.form.get("finished"):
         game.finished         = True
         game.overall_rating   = _int(request.form.get("overall_rating"))

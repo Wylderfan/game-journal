@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% from "macros.html" import stars %}
 {% block title %}Play Next — Game Journal{% endblock %}
 
 {% block content %}
@@ -31,7 +30,7 @@
     <a href="{{ url_for('backlog.index') }}" class="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 rounded transition-colors">Backlog →</a>
   </div>
 </div>
-<p class="text-xs text-gray-500 mb-6">Ranked by hype, series progress, length, category priority, and play status. Change category priority in <a href="{{ url_for('backlog.categories') }}" class="text-indigo-400 hover:underline">Categories</a>.</p>
+<p class="text-xs text-gray-500 mb-6">Ranked by motivation & excitement, series progress, length, category priority, and play status. Change category priority in <a href="{{ url_for('backlog.categories') }}" class="text-indigo-400 hover:underline">Categories</a>.</p>
 
 {% if ranked %}
 <ul class="space-y-2">
@@ -70,9 +69,7 @@
         {% if game.series_continuity %}
           <span class="text-xs text-indigo-400 font-medium">Series</span>
         {% endif %}
-        {% if game.hype %}
-          <span class="text-xs" title="Hype: {{ game.hype }}/5">{{ stars(game.hype) }}</span>
-        {% endif %}
+        <span class="text-xs font-mono text-gray-500 bg-gray-700 px-1.5 py-0.5 rounded" title="Play next score">{{ scores[game.id] }} pts</span>
         {{ mood_bars(game) }}
       </div>
     </div>

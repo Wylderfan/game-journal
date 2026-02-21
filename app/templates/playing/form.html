@@ -55,29 +55,72 @@
       </select>
     </div>
 
-    <!-- Ratings -->
-    <div class="mb-4 flex gap-8">
-      <div>
-        <label class="block text-sm text-gray-400 mb-2">Enjoyment</label>
-        <div class="flex gap-1" id="enjoyment-stars">
-          {% for i in range(1, 6) %}
-            <button type="button" data-group="enjoyment" data-val="{{ i }}"
-                    class="star-btn text-2xl {{ 'text-yellow-400' if game.enjoyment and i <= game.enjoyment else 'text-gray-600' }} hover:text-yellow-300 transition-colors">★</button>
-          {% endfor %}
-        </div>
-        <input type="hidden" name="enjoyment" id="enjoyment-val" value="{{ game.enjoyment or '' }}">
+    <!-- Hype -->
+    <div class="mb-4">
+      <label class="block text-sm text-gray-400 mb-2">Motivation & Excitement — how motivated and excited are you to play this?</label>
+      <div class="flex gap-1" id="hype-stars">
+        {% for i in range(1, 6) %}
+          <button type="button" data-group="hype" data-val="{{ i }}"
+                  class="star-btn text-2xl {{ 'text-yellow-400' if game.hype and i <= game.hype else 'text-gray-600' }} hover:text-yellow-300 transition-colors">★</button>
+        {% endfor %}
       </div>
-      <div>
-        <label class="block text-sm text-gray-400 mb-2">Motivation</label>
-        <div class="flex gap-1" id="motivation-stars">
-          {% for i in range(1, 6) %}
-            <button type="button" data-group="motivation" data-val="{{ i }}"
-                    class="star-btn text-2xl {{ 'text-yellow-400' if game.motivation and i <= game.motivation else 'text-gray-600' }} hover:text-yellow-300 transition-colors">★</button>
-          {% endfor %}
+      <input type="hidden" name="hype" id="hype-val" value="{{ game.hype or '' }}">
+    </div>
+
+    <!-- Estimated length -->
+    <div class="mb-4">
+      <label class="block text-sm text-gray-400 mb-1" for="estimated_length">Estimated length</label>
+      <select id="estimated_length" name="estimated_length"
+              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <option value="">— Not sure —</option>
+        {% for opt in ["Short", "Medium", "Long", "Very Long"] %}
+          <option value="{{ opt }}" {{ 'selected' if game.estimated_length == opt }}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Series continuity -->
+    <div class="mb-4">
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" name="series_continuity" value="1"
+               {{ 'checked' if game.series_continuity }}
+               class="w-4 h-4 accent-indigo-500">
+        <span class="text-sm text-gray-300">Part of a series I'm actively playing through</span>
+      </label>
+    </div>
+
+    <!-- Mood blend -->
+    <div class="mb-4">
+      <label class="block text-sm text-gray-400 mb-3">Mood blend</label>
+      <div class="space-y-3">
+        {% for mood, label, color in [('chill', 'Chill', 'text-sky-400'), ('intense', 'Intense', 'text-red-400'),
+                                      ('story', 'Story', 'text-purple-400'), ('action', 'Action', 'text-orange-400'),
+                                      ('exploration', 'Exploration', 'text-green-400')] %}
+        <div class="flex items-center gap-3">
+          <span class="w-24 text-xs {{ color }} shrink-0">{{ label }}</span>
+          <input type="range" name="mood_{{ mood }}" id="mood_{{ mood }}"
+                 min="0" max="5" value="{{ game['mood_' ~ mood] or 0 }}"
+                 class="flex-1 accent-indigo-500"
+                 oninput="document.getElementById('mood_{{ mood }}_val').textContent = this.value">
+          <span id="mood_{{ mood }}_val" class="w-4 text-xs text-gray-400 text-right shrink-0">{{ game['mood_' ~ mood] or 0 }}</span>
         </div>
-        <input type="hidden" name="motivation" id="motivation-val" value="{{ game.motivation or '' }}">
+        {% endfor %}
       </div>
     </div>
+
+    <!-- Category -->
+    {% if categories %}
+    <div class="mb-4">
+      <label class="block text-sm text-gray-400 mb-1" for="category_id">Category</label>
+      <select id="category_id" name="category_id"
+              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <option value="">— Uncategorized —</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {{ 'selected' if game.category_id == cat.id }}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
 
     <!-- Notes -->
     <div class="mb-6">

@@ -29,8 +29,8 @@
         {% if game.release_year %}
           <p class="text-sm text-gray-500 mt-1">{{ game.release_year }}</p>
         {% endif %}
-        {% if game.genres %}
-          <p class="text-sm text-gray-500">{{ game.genres }}</p>
+        {% if game.category %}
+          <p class="text-sm text-gray-500">{{ game.category.name }}</p>
         {% endif %}
       </div>
       <div class="flex gap-2 flex-wrap mt-2">
@@ -73,17 +73,47 @@
   <!-- Ratings -->
   <section class="bg-gray-900 rounded-xl p-5 mb-4">
     <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Ratings</h2>
-    <div class="flex flex-col gap-2 text-sm">
+    <div class="flex flex-col gap-3 text-sm">
       <div class="flex items-center gap-3">
-        <span class="w-20 text-gray-400">Enjoyment</span>
-        {{ stars(game.enjoyment) }}
-        {% if not game.enjoyment %}<span class="text-gray-600 text-xs">unrated</span>{% endif %}
+        <span class="w-28 text-gray-400">Motivation</span>
+        {{ stars(game.hype) }}
+        {% if not game.hype %}<span class="text-gray-600 text-xs">unrated</span>{% endif %}
       </div>
+      {% if game.estimated_length %}
       <div class="flex items-center gap-3">
-        <span class="w-20 text-gray-400">Motivation</span>
-        {{ stars(game.motivation) }}
-        {% if not game.motivation %}<span class="text-gray-600 text-xs">unrated</span>{% endif %}
+        <span class="w-20 text-gray-400">Length</span>
+        <span class="text-gray-300">{{ game.estimated_length }}</span>
       </div>
+      {% endif %}
+      {% if game.series_continuity %}
+      <div class="flex items-center gap-3">
+        <span class="w-20 text-gray-400">Series</span>
+        <span class="text-gray-300">Actively playing through</span>
+      </div>
+      {% endif %}
+      {% set moods = [('mood_chill', 'Chill'), ('mood_intense', 'Intense'), ('mood_story', 'Story'),
+                      ('mood_action', 'Action'), ('mood_exploration', 'Exploration')] %}
+      {% set has_mood = game.mood_chill or game.mood_intense or game.mood_story or game.mood_action or game.mood_exploration %}
+      {% if has_mood %}
+      <div>
+        <span class="text-gray-400 text-sm">Mood</span>
+        <div class="mt-2 flex flex-col gap-1.5">
+          {% for field, label in moods %}
+            {% set val = game[field] or 0 %}
+            {% if val %}
+            <div class="flex items-center gap-2 text-xs">
+              <span class="w-20 text-gray-500">{{ label }}</span>
+              <div class="flex gap-0.5">
+                {% for pip in range(1, 6) %}
+                  <span class="w-2.5 h-2.5 rounded-sm {{ 'bg-indigo-500' if pip <= val else 'bg-gray-700' }}"></span>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </div>
   </section>
 

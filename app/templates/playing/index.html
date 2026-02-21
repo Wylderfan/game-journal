@@ -57,23 +57,17 @@
       <p class="text-xs text-gray-500">{{ game.release_year }}</p>
     {% endif %}
 
-    <div class="flex flex-col gap-1 text-xs text-gray-400">
-      <div class="flex items-center gap-2">
-        <span class="w-16 shrink-0">Enjoyment</span>
-        {{ stars(game.enjoyment) }}
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="w-16 shrink-0">Motivation</span>
-        {{ stars(game.motivation) }}
-      </div>
+    <div class="flex items-center gap-2 text-xs text-gray-400">
+      <span class="w-20 shrink-0">Motivation</span>
+      {{ stars(game.hype) }}
     </div>
 
     {% if game.notes %}
       <p class="text-xs text-gray-400 line-clamp-3 mt-1">{{ game.notes }}</p>
     {% endif %}
 
-    {% if game.genres %}
-      <p class="text-xs text-gray-600 mt-auto pt-2">{{ game.genres }}</p>
+    {% if game.category %}
+      <p class="text-xs text-gray-600 mt-auto pt-2">{{ game.category.name }}</p>
     {% endif %}
 
     <!-- Check-in button -->
@@ -141,28 +135,16 @@
 
     <form id="checkin-form" method="post" class="flex flex-col gap-4">
 
-      <!-- Enjoyment -->
-      <div>
-        <label class="text-xs text-gray-400 block mb-1">Enjoyment</label>
-        <div class="flex gap-1" id="modal-enjoyment-stars">
-          {% for i in range(1, 6) %}
-            <button type="button" data-group="modal-enjoyment" data-val="{{ i }}"
-                    class="star-btn text-2xl text-gray-600 hover:text-yellow-300 transition-colors">★</button>
-          {% endfor %}
-        </div>
-        <input type="hidden" name="enjoyment" id="modal-enjoyment-val">
-      </div>
-
       <!-- Motivation -->
       <div>
-        <label class="text-xs text-gray-400 block mb-1">Motivation</label>
-        <div class="flex gap-1" id="modal-motivation-stars">
+        <label class="text-xs text-gray-400 block mb-1">Motivation (optional)</label>
+        <div class="flex gap-1" id="modal-hype-stars">
           {% for i in range(1, 6) %}
-            <button type="button" data-group="modal-motivation" data-val="{{ i }}"
+            <button type="button" data-group="modal-hype" data-val="{{ i }}"
                     class="star-btn text-2xl text-gray-600 hover:text-yellow-300 transition-colors">★</button>
           {% endfor %}
         </div>
-        <input type="hidden" name="motivation" id="modal-motivation-val">
+        <input type="hidden" name="hype" id="modal-hype-val">
       </div>
 
       <!-- Hours -->
@@ -273,11 +255,10 @@ function openCheckinModal(action, gameName) {
   // Reset form
   document.getElementById('checkin-form').action = action;
   document.getElementById('checkin-modal-game').textContent = gameName;
-  document.getElementById('modal-enjoyment-val').value  = '';
-  document.getElementById('modal-motivation-val').value = '';
-  document.getElementById('modal-hours').value   = '';
-  document.getElementById('modal-status').value  = '';
-  document.getElementById('modal-note').value    = '';
+  document.getElementById('modal-hype-val').value = '';
+  document.getElementById('modal-hours').value  = '';
+  document.getElementById('modal-status').value = '';
+  document.getElementById('modal-note').value   = '';
   document.getElementById('modal-finished').checked = false;
   document.getElementById('finish-survey-fields').classList.add('hidden');
   document.getElementById('modal-overall-val').value    = '';
