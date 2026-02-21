@@ -32,40 +32,6 @@ def detail(game_id):
     return render_template("playing/detail.html", game=game, statuses=STATUSES)
 
 
-@playing_bp.route("/add", methods=["GET", "POST"])
-def add():
-    if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        if not name:
-            flash("Game name is required.", "error")
-            return redirect(url_for("playing.add"))
-
-        game = Game(
-            name=name,
-            section="active",
-            status=request.form.get("status", "Playing"),
-            enjoyment=_int(request.form.get("enjoyment")),
-            motivation=_int(request.form.get("motivation")),
-            notes=request.form.get("notes", "").strip() or None,
-            rawg_id=_int(request.form.get("rawg_id")),
-            cover_url=request.form.get("cover_url") or None,
-            release_year=_int(request.form.get("release_year")),
-            genres=request.form.get("genres") or None,
-            platforms=request.form.get("platforms") or None,
-        )
-        db.session.add(game)
-        try:
-            db.session.commit()
-            flash(f"'{game.name}' added to active library.", "success")
-            return redirect(url_for("playing.index"))
-        except Exception:
-            db.session.rollback()
-            flash("Something went wrong. Please try again.", "error")
-            return redirect(url_for("playing.add"))
-
-    return render_template("playing/form.html", game=None, statuses=STATUSES)
-
-
 @playing_bp.route("/<int:game_id>/edit", methods=["GET", "POST"])
 def edit(game_id):
     game = db.get_or_404(Game, game_id)
