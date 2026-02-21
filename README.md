@@ -1,6 +1,6 @@
 # game-journal
 
-A personal, private game library journal built with Flask. Track games you're actively playing with enjoyment and motivation ratings, and manage your backlog with category organization and drag-and-drop prioritization.
+A personal, private game library journal built with Flask. Track games you're actively playing with enjoyment and motivation ratings, manage your backlog by category, and get a ranked play-next list driven by a per-game survey and your current category priorities.
 
 Access is restricted entirely by Tailscale — no login system. If you're on the Tailnet, you can access the app.
 
@@ -18,12 +18,21 @@ Access is restricted entirely by Tailscale — no login system. If you're on the
 **Backlog Manager**
 - Organize unplayed games into user-defined categories
 - Rename categories in place
-- Drag-and-drop to reorder games within each category
+- Games listed alphabetically within each category
 - One-click promote to active library
+
+**Play Next**
+- Cross-category ranked list of what to play next, updated dynamically
+- Score is computed from a per-game survey filled in at add time:
+  - Hype (1–5 stars), estimated length, series continuity bonus
+  - Mood blend — five sliders (Chill / Intense / Story / Action / Exploration)
+- Category priority order (drag to reorder on the Categories page) adds a bonus to every game in higher-priority categories
+- Playing games get a +30 bonus; On Hold games get a –15 penalty
+- Active (Playing / On Hold) games appear in the list alongside backlog games
 
 **Dashboard**
 - At-a-glance stats: active game count, backlog size, completed count
-- Top game per backlog category
+- Up Next widget showing the top 5 scored games with one-click promote
 
 ---
 
