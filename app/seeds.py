@@ -141,6 +141,7 @@ def seed_command():
 
     click.echo("Clearing existing data...")
     db.session.execute(db.text("SET FOREIGN_KEY_CHECKS=0"))
+    db.session.execute(db.text("DELETE FROM game_categories"))
     Game.query.delete()
     Category.query.delete()
     db.session.execute(db.text("SET FOREIGN_KEY_CHECKS=1"))
@@ -158,7 +159,9 @@ def seed_command():
     for data, cat_name in BACKLOG_GAMES:
         click.echo(f"  {data['name']}...")
         meta = _rawg_meta(data["name"])
-        db.session.add(Game(**{**data, **meta, "rank": 0, "category_id": cats[cat_name].id}))
+        game = Game(**{**data, **meta, "rank": 0})
+        db.session.add(game)
+        game.categories = [cats[cat_name]]
 
     db.session.commit()
     click.echo(f"Done. {len(BACKLOG_GAMES)} backlog games seeded.")

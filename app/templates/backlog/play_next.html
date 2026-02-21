@@ -60,9 +60,9 @@
             <span class="text-xs font-medium text-yellow-400 bg-yellow-900/40 px-1.5 py-0.5 rounded">On Hold</span>
           {% endif %}
         {% else %}
-          {% if game.category %}
-            <span class="text-xs text-gray-500 bg-gray-700 px-1.5 py-0.5 rounded">{{ game.category.name }}</span>
-          {% endif %}
+          {% for cat in game.categories %}
+            <span class="text-xs text-gray-500 bg-gray-700 px-1.5 py-0.5 rounded">{{ cat.name }}</span>
+          {% endfor %}
         {% endif %}
         {% if game.estimated_length %}
           <span class="text-xs text-gray-400">{{ game.estimated_length }}</span>

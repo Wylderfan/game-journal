@@ -4,6 +4,13 @@ from app import db
 STATUSES = ["Playing", "On Hold", "Dropped", "Completed"]
 
 
+game_categories = db.Table(
+    "game_categories",
+    db.Column("game_id",     db.Integer, db.ForeignKey("games.id",      ondelete="CASCADE"), primary_key=True),
+    db.Column("category_id", db.Integer, db.ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
 class Category(db.Model):
     __tablename__ = "categories"
 
@@ -12,13 +19,12 @@ class Category(db.Model):
     # Priority order for play-next scoring (1 = most interested in right now).
     rank = db.Column(db.Integer, nullable=False, default=0)
 
-    # One category → many games, ordered alphabetically.
-    # back_populates mirrors Game.category so both sides are explicit.
+    # Many categories <-> many games, ordered alphabetically.
     games = db.relationship(
         "Game",
-        back_populates="category",
+        secondary="game_categories",
+        back_populates="categories",
         order_by="Game.name",
-        lazy="select",
     )
 
     def __repr__(self) -> str:
@@ -79,14 +85,13 @@ class Game(db.Model):
     mood_action      = db.Column(db.Integer, nullable=True)
     mood_exploration = db.Column(db.Integer, nullable=True)
 
-    # SET NULL so deleting a category orphans its games rather than
-    # raising a foreign-key violation.
-    category_id = db.Column(
-        db.Integer,
-        db.ForeignKey("categories.id", ondelete="SET NULL"),
-        nullable=True,
+    # Many games <-> many categories.
+    categories = db.relationship(
+        "Category",
+        secondary="game_categories",
+        back_populates="games",
+        order_by="Category.rank",
     )
-    category = db.relationship("Category", back_populates="games")
 
     # ------------------------------------------------------------------ #
     # RAWG metadata (optional — populated at add time via API lookup)     #
@@ -141,7 +146,7 @@ class Game(db.Model):
             "motivation":   self.motivation,
             "notes":        self.notes,
             "rank":         self.rank,
-            "category_id":  self.category_id,
+            "category_ids": [c.id for c in self.categories],
             "rawg_id":          self.rawg_id,
             "cover_url":        self.cover_url,
             "release_year":     self.release_year,
