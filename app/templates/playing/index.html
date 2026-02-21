@@ -66,8 +66,8 @@
       <p class="text-xs text-gray-400 line-clamp-3 mt-1">{{ game.notes }}</p>
     {% endif %}
 
-    {% if game.category %}
-      <p class="text-xs text-gray-600 mt-auto pt-2">{{ game.category.name }}</p>
+    {% if game.categories %}
+      <p class="text-xs text-gray-600 mt-auto pt-2">{{ game.categories | map(attribute='name') | join(', ') }}</p>
     {% endif %}
 
     <!-- Check-in button -->

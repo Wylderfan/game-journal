@@ -28,8 +28,10 @@ def _play_next_score(game):
     score += 25 if game.series_continuity else 0
     score += _LENGTH_SCORES.get(game.estimated_length or "", 0)
 
-    if game.category and game.category.rank:
-        score += max(0, 30 - (game.category.rank - 1) * 5)
+    if game.categories:
+        best_rank = min((c.rank for c in game.categories if c.rank), default=0)
+        if best_rank:
+            score += max(0, 30 - (best_rank - 1) * 5)
 
     if game.status == "Playing":
         score += 30
@@ -46,9 +48,11 @@ def _play_next_score(game):
 @backlog_bp.route("/")
 def index():
     categories = Category.query.order_by(Category.rank, Category.name).all()
+    has_games = Game.query.filter_by(section="backlog").count() > 0
     uncategorized = (
         Game.query
-        .filter_by(section="backlog", category_id=None)
+        .filter_by(section="backlog")
+        .filter(~Game.categories.any())
         .order_by(Game.name)
         .all()
     )
@@ -56,6 +60,7 @@ def index():
         "backlog/index.html",
         categories=categories,
         uncategorized=uncategorized,
+        has_games=has_games,
     )
 
 
@@ -69,14 +74,11 @@ def add():
             flash("Game name is required.", "error")
             return redirect(url_for("backlog.add"))
 
-        cat_id = _int(request.form.get("category_id"))
-
         game = Game(
             name=name,
             section="backlog",
             status=None,
             rank=0,
-            category_id=cat_id,
             rawg_id=_int(request.form.get("rawg_id")),
             cover_url=request.form.get("cover_url") or None,
             release_year=_int(request.form.get("release_year")),
@@ -93,6 +95,9 @@ def add():
             mood_exploration=_int(request.form.get("mood_exploration")),
         )
         db.session.add(game)
+        cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
+        if cat_ids:
+            game.categories = Category.query.filter(Category.id.in_(cat_ids)).all()
 
         try:
             db.session.commit()

@@ -29,8 +29,8 @@
         {% if game.release_year %}
           <p class="text-sm text-gray-500 mt-1">{{ game.release_year }}</p>
         {% endif %}
-        {% if game.category %}
-          <p class="text-sm text-gray-500">{{ game.category.name }}</p>
+        {% if game.categories %}
+          <p class="text-sm text-gray-500">{{ game.categories | map(attribute='name') | join(', ') }}</p>
         {% endif %}
       </div>
       <div class="flex gap-2 flex-wrap mt-2">

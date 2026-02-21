@@ -53,8 +53,9 @@ def edit(game_id):
         game.mood_story        = _int(request.form.get("mood_story"))
         game.mood_action       = _int(request.form.get("mood_action"))
         game.mood_exploration  = _int(request.form.get("mood_exploration"))
-        game.notes             = request.form.get("notes", "").strip() or None
-        game.category_id       = _int(request.form.get("category_id"))
+        game.notes      = request.form.get("notes", "").strip() or None
+        cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
+        game.categories = Category.query.filter(Category.id.in_(cat_ids)).all() if cat_ids else []
         # Only overwrite RAWG fields if the form sent something new
         game.cover_url    = request.form.get("cover_url")    or game.cover_url
         game.rawg_id      = _int(request.form.get("rawg_id")) or game.rawg_id
