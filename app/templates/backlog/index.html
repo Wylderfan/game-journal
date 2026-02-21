@@ -29,12 +29,8 @@
   <!-- Info -->
   <div class="flex-1 min-w-0">
     <p class="font-medium text-sm truncate">{{ game.name }}</p>
-    {% if game.release_year or game.genres %}
-      <p class="text-xs text-gray-500 truncate">
-        {% if game.release_year %}{{ game.release_year }}{% endif %}
-        {% if game.release_year and game.genres %} · {% endif %}
-        {% if game.genres %}{{ game.genres }}{% endif %}
-      </p>
+    {% if game.release_year %}
+      <p class="text-xs text-gray-500 truncate">{{ game.release_year }}</p>
     {% endif %}
   </div>
 

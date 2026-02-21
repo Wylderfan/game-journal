@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from app import db
-from app.models import Game, CheckIn, STATUSES
+from app.models import Game, Category, CheckIn, STATUSES
 from app.utils.helpers import _int, _float
 
 playing_bp = Blueprint("playing", __name__)
@@ -35,6 +35,7 @@ def detail(game_id):
 @playing_bp.route("/<int:game_id>/edit", methods=["GET", "POST"])
 def edit(game_id):
     game = db.get_or_404(Game, game_id)
+    categories = Category.query.order_by(Category.rank, Category.name).all()
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -42,11 +43,12 @@ def edit(game_id):
             flash("Game name is required.", "error")
             return redirect(url_for("playing.edit", game_id=game_id))
 
-        game.name       = name
-        game.status     = request.form.get("status", game.status)
-        game.enjoyment  = _int(request.form.get("enjoyment"))
-        game.motivation = _int(request.form.get("motivation"))
-        game.notes      = request.form.get("notes", "").strip() or None
+        game.name        = name
+        game.status      = request.form.get("status", game.status)
+        game.enjoyment   = _int(request.form.get("enjoyment"))
+        game.motivation  = _int(request.form.get("motivation"))
+        game.notes       = request.form.get("notes", "").strip() or None
+        game.category_id = _int(request.form.get("category_id"))
         # Only overwrite RAWG fields if the form sent something new
         game.cover_url    = request.form.get("cover_url")    or game.cover_url
         game.rawg_id      = _int(request.form.get("rawg_id")) or game.rawg_id
@@ -63,7 +65,7 @@ def edit(game_id):
             flash("Something went wrong. Please try again.", "error")
             return redirect(url_for("playing.edit", game_id=game_id))
 
-    return render_template("playing/form.html", game=game, statuses=STATUSES)
+    return render_template("playing/form.html", game=game, statuses=STATUSES, categories=categories)
 
 
 @playing_bp.route("/<int:game_id>/status", methods=["POST"])

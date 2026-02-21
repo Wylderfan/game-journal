@@ -125,7 +125,6 @@ def promote(game_id):
     game.section       = "active"
     game.status        = "Playing"
     game.rank          = 0
-    game.category_id   = None
     game.play_next_rank = None
     try:
         db.session.commit()

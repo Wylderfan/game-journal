@@ -79,6 +79,20 @@
       </div>
     </div>
 
+    <!-- Category -->
+    {% if categories %}
+    <div class="mb-4">
+      <label class="block text-sm text-gray-400 mb-1" for="category_id">Category</label>
+      <select id="category_id" name="category_id"
+              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <option value="">— Uncategorized —</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {{ 'selected' if game.category_id == cat.id }}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+
     <!-- Notes -->
     <div class="mb-6">
       <label class="block text-sm text-gray-400 mb-1" for="notes">Notes</label>
