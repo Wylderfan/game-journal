@@ -5,12 +5,18 @@ from app import db
 from app.models import Category, Game
 
 
-# Categories in priority order (index 0 = rank 1 = most interested right now)
+# RAWG genre categories in default rank order (user can reorder via the UI)
 CATEGORIES = [
-    "Action RPG",
+    "Action",
+    "RPG",
+    "Adventure",
     "Indie",
-    "Platformer",
     "Strategy",
+    "Shooter",
+    "Platformer",
+    "Puzzle",
+    "Simulation",
+    "Casual",
 ]
 
 # (game data, category name)
@@ -34,7 +40,7 @@ BACKLOG_GAMES = [
             "mood_action": 3,
             "mood_exploration": 4,
         },
-        "Action RPG",
+        "RPG",
     ),
     (
         {
