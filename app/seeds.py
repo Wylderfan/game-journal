@@ -8,15 +8,24 @@ from app.models import Category, Game
 # RAWG genre categories in default rank order (user can reorder via the UI)
 CATEGORIES = [
     "Action",
-    "RPG",
-    "Adventure",
     "Indie",
+    "Adventure",
+    "RPG",
     "Strategy",
     "Shooter",
-    "Platformer",
-    "Puzzle",
-    "Simulation",
     "Casual",
+    "Simulation",
+    "Puzzle",
+    "Arcade",
+    "Platformer",
+    "Massively Multiplayer",
+    "Racing",
+    "Sports",
+    "Fighting",
+    "Family",
+    "Board Games",
+    "Card",
+    "Educational",
 ]
 
 # (game data, category name)
