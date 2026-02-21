@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}{{ "Edit" if game else "Add Game" }} — Game Journal{% endblock %}
+{% block title %}Edit Game — Game Journal{% endblock %}
 
 {% block content %}
 <div class="max-w-lg">
-  <h1 class="text-2xl font-bold mb-6">{{ "Edit" if game else "Add Game" }}</h1>
+  <h1 class="text-2xl font-bold mb-6">Edit Game</h1>
 
   <form method="post"
-        action="{{ url_for('playing.edit', game_id=game.id) if game else url_for('playing.add') }}">
+        action="{{ url_for('playing.edit', game_id=game.id) }}">
 
     <!-- RAWG search -->
     <div class="mb-5">
@@ -30,17 +30,17 @@
     </div>
 
     <!-- Hidden RAWG metadata -->
-    <input type="hidden" name="rawg_id"      id="rawg_id"      value="{{ game.rawg_id or '' if game else '' }}">
-    <input type="hidden" name="cover_url"    id="cover_url"    value="{{ game.cover_url or '' if game else '' }}">
-    <input type="hidden" name="release_year" id="release_year" value="{{ game.release_year or '' if game else '' }}">
-    <input type="hidden" name="genres"       id="genres"       value="{{ game.genres or '' if game else '' }}">
-    <input type="hidden" name="platforms"    id="platforms"    value="{{ game.platforms or '' if game else '' }}">
+    <input type="hidden" name="rawg_id"      id="rawg_id"      value="{{ game.rawg_id or '' }}">
+    <input type="hidden" name="cover_url"    id="cover_url"    value="{{ game.cover_url or '' }}">
+    <input type="hidden" name="release_year" id="release_year" value="{{ game.release_year or '' }}">
+    <input type="hidden" name="genres"       id="genres"       value="{{ game.genres or '' }}">
+    <input type="hidden" name="platforms"    id="platforms"    value="{{ game.platforms or '' }}">
 
     <!-- Name -->
     <div class="mb-4">
       <label class="block text-sm text-gray-400 mb-1" for="name">Game name <span class="text-red-400">*</span></label>
       <input id="name" name="name" type="text" required
-             value="{{ game.name if game else '' }}"
+             value="{{ game.name }}"
              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
     </div>
 
@@ -62,20 +62,20 @@
         <div class="flex gap-1" id="enjoyment-stars">
           {% for i in range(1, 6) %}
             <button type="button" data-group="enjoyment" data-val="{{ i }}"
-                    class="star-btn text-2xl {{ 'text-yellow-400' if game and game.enjoyment and i <= game.enjoyment else 'text-gray-600' }} hover:text-yellow-300 transition-colors">★</button>
+                    class="star-btn text-2xl {{ 'text-yellow-400' if game.enjoyment and i <= game.enjoyment else 'text-gray-600' }} hover:text-yellow-300 transition-colors">★</button>
           {% endfor %}
         </div>
-        <input type="hidden" name="enjoyment" id="enjoyment-val" value="{{ game.enjoyment or '' if game else '' }}">
+        <input type="hidden" name="enjoyment" id="enjoyment-val" value="{{ game.enjoyment or '' }}">
       </div>
       <div>
         <label class="block text-sm text-gray-400 mb-2">Motivation</label>
         <div class="flex gap-1" id="motivation-stars">
           {% for i in range(1, 6) %}
             <button type="button" data-group="motivation" data-val="{{ i }}"
-                    class="star-btn text-2xl {{ 'text-yellow-400' if game and game.motivation and i <= game.motivation else 'text-gray-600' }} hover:text-yellow-300 transition-colors">★</button>
+                    class="star-btn text-2xl {{ 'text-yellow-400' if game.motivation and i <= game.motivation else 'text-gray-600' }} hover:text-yellow-300 transition-colors">★</button>
           {% endfor %}
         </div>
-        <input type="hidden" name="motivation" id="motivation-val" value="{{ game.motivation or '' if game else '' }}">
+        <input type="hidden" name="motivation" id="motivation-val" value="{{ game.motivation or '' }}">
       </div>
     </div>
 
@@ -83,13 +83,13 @@
     <div class="mb-6">
       <label class="block text-sm text-gray-400 mb-1" for="notes">Notes</label>
       <textarea id="notes" name="notes" rows="4"
-                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 resize-y">{{ game.notes or '' if game else '' }}</textarea>
+                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 resize-y">{{ game.notes or '' }}</textarea>
     </div>
 
     <div class="flex gap-3">
       <button type="submit"
               class="px-5 py-2 bg-indigo-700 hover:bg-indigo-600 rounded text-sm font-medium transition-colors">
-        {{ "Save changes" if game else "Add game" }}
+        Save changes
       </button>
       <a href="{{ url_for('playing.index') }}"
          class="px-5 py-2 bg-gray-800 hover:bg-gray-700 rounded text-sm transition-colors">
