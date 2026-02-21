@@ -13,66 +13,6 @@ CATEGORIES = [
     "Strategy",
 ]
 
-ACTIVE_GAMES = [
-    {
-        "name": "Elden Ring",
-        "section": "active",
-        "status": "Playing",
-        "enjoyment": 5,
-        "motivation": 5,
-        "notes": "Incredible open world. Currently exploring Liurnia.",
-        "genres": "Action, RPG",
-        "platforms": "PC, PS5, Xbox Series X",
-        "release_year": 2022,
-        "hype": 5,
-        "estimated_length": "Very Long",
-        "series_continuity": False,
-        "mood_chill": 1,
-        "mood_intense": 5,
-        "mood_story": 2,
-        "mood_action": 5,
-        "mood_exploration": 5,
-    },
-    {
-        "name": "Hades",
-        "section": "active",
-        "status": "On Hold",
-        "enjoyment": 4,
-        "motivation": 3,
-        "notes": "Great game, just taking a break after a dozen runs.",
-        "genres": "Action, Roguelike, Indie",
-        "platforms": "PC, Switch, PS4",
-        "release_year": 2020,
-        "hype": 4,
-        "estimated_length": "Medium",
-        "series_continuity": False,
-        "mood_chill": 1,
-        "mood_intense": 4,
-        "mood_story": 2,
-        "mood_action": 5,
-        "mood_exploration": 2,
-    },
-    {
-        "name": "Disco Elysium",
-        "section": "active",
-        "status": "Playing",
-        "enjoyment": 5,
-        "motivation": 4,
-        "notes": "Absolutely wild writing. Playing the detective badly on purpose.",
-        "genres": "RPG",
-        "platforms": "PC, PS4, PS5",
-        "release_year": 2019,
-        "hype": 5,
-        "estimated_length": "Medium",
-        "series_continuity": False,
-        "mood_chill": 4,
-        "mood_intense": 2,
-        "mood_story": 5,
-        "mood_action": 1,
-        "mood_exploration": 3,
-    },
-]
-
 # (game data, category name)
 # Survey fields: hype (1-5), estimated_length, series_continuity,
 #                mood_chill/intense/story/action/exploration (0-5 each)
@@ -90,25 +30,6 @@ BACKLOG_GAMES = [
             "series_continuity": False,
             "mood_chill": 1,
             "mood_intense": 3,
-            "mood_story": 5,
-            "mood_action": 3,
-            "mood_exploration": 4,
-        },
-        "Action RPG",
-    ),
-    (
-        {
-            "name": "Divinity: Original Sin 2",
-            "section": "backlog",
-            "status": None,
-            "genres": "RPG, Strategy",
-            "platforms": "PC, PS4, Xbox One, Switch",
-            "release_year": 2017,
-            "hype": 4,
-            "estimated_length": "Very Long",
-            "series_continuity": True,
-            "mood_chill": 1,
-            "mood_intense": 2,
             "mood_story": 5,
             "mood_action": 3,
             "mood_exploration": 4,
@@ -233,12 +154,6 @@ def seed_command():
         cats[name] = c
     db.session.flush()
 
-    click.echo("Creating active games...")
-    for data in ACTIVE_GAMES:
-        click.echo(f"  {data['name']}...")
-        meta = _rawg_meta(data["name"])
-        db.session.add(Game(**{**data, **meta}))
-
     click.echo("Creating backlog games...")
     for data, cat_name in BACKLOG_GAMES:
         click.echo(f"  {data['name']}...")
@@ -246,4 +161,4 @@ def seed_command():
         db.session.add(Game(**{**data, **meta, "rank": 0, "category_id": cats[cat_name].id}))
 
     db.session.commit()
-    click.echo(f"Done. {len(ACTIVE_GAMES)} active, {len(BACKLOG_GAMES)} backlog games seeded.")
+    click.echo(f"Done. {len(BACKLOG_GAMES)} backlog games seeded.")
