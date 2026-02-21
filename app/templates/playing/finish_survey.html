@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Finish Survey — {{ game.name }} — Game Journal{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+
+  <a href="{{ url_for('playing.detail', game_id=game.id) }}"
+     class="text-sm text-gray-500 hover:text-white transition-colors">← {{ game.name }}</a>
+
+  <h1 class="text-2xl font-bold mt-4 mb-2">Finished!</h1>
+  <p class="text-sm text-gray-400 mb-8">How was <span class="text-white">{{ game.name }}</span>?</p>
+
+  <form method="post" action="{{ url_for('playing.finish', game_id=game.id) }}">
+
+    <!-- Overall rating 1–10 -->
+    <div class="mb-6">
+      <label class="block text-sm text-gray-400 mb-2">Overall rating (1–10)</label>
+      <div class="flex gap-1" id="overall-stars">
+        {% for i in range(1, 11) %}
+          <button type="button" data-group="overall_rating" data-val="{{ i }}"
+                  class="star-btn text-2xl text-gray-600 hover:text-yellow-300 transition-colors">★</button>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="overall_rating" id="overall_rating-val">
+    </div>
+
+    <!-- Would play again -->
+    <div class="mb-6">
+      <label class="block text-sm text-gray-400 mb-2">Would you play it again?</label>
+      <div class="flex gap-3">
+        {% for opt in ["Yes", "Maybe", "No"] %}
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="would_play_again" value="{{ opt }}"
+                   class="accent-indigo-500">
+            <span class="text-sm">{{ opt }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Hours to finish -->
+    <div class="mb-6">
+      <label class="block text-sm text-gray-400 mb-2" for="hours_to_finish">
+        Total hours to finish
+      </label>
+      <input id="hours_to_finish" name="hours_to_finish" type="number" min="1" max="9999"
+             class="w-32 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+    </div>
+
+    <!-- Difficulty 1–5 -->
+    <div class="mb-8">
+      <label class="block text-sm text-gray-400 mb-2">Difficulty</label>
+      <div class="flex gap-1" id="difficulty-stars">
+        {% for i in range(1, 6) %}
+          <button type="button" data-group="difficulty" data-val="{{ i }}"
+                  class="star-btn text-2xl text-gray-600 hover:text-yellow-300 transition-colors">★</button>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="difficulty" id="difficulty-val">
+    </div>
+
+    <div class="flex gap-3">
+      <button type="submit"
+              class="px-5 py-2 bg-purple-700 hover:bg-purple-600 rounded text-sm font-medium transition-colors">
+        Save &amp; mark finished
+      </button>
+      <a href="{{ url_for('playing.detail', game_id=game.id) }}"
+         class="px-5 py-2 bg-gray-800 hover:bg-gray-700 rounded text-sm transition-colors">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+
+<script>
+document.querySelectorAll('.star-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var group = this.dataset.group;
+    var val   = parseInt(this.dataset.val);
+    document.getElementById(group + '-val').value = val;
+    document.querySelectorAll('[data-group="' + group + '"]').forEach(function(b) {
+      var bVal = parseInt(b.dataset.val);
+      b.classList.toggle('text-yellow-400', bVal <= val);
+      b.classList.toggle('text-gray-600',   bVal >  val);
+    });
+  });
+});
+</script>
+{% endblock %}

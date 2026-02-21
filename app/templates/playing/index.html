@@ -42,8 +42,11 @@
         </svg>
       </div>
     {% endif %}
-    <div class="absolute top-2 left-2">
+    <div class="absolute top-2 left-2 flex flex-col gap-1">
       {{ status_badge(game.status) }}
+      {% if game.finished %}
+        <span class="px-2 py-0.5 rounded text-xs font-semibold bg-purple-900 text-purple-200">Finished ✓</span>
+      {% endif %}
     </div>
   </div>
 
@@ -79,6 +82,15 @@
     {% if game.genres %}
       <p class="text-xs text-gray-600 mt-auto pt-2">{{ game.genres }}</p>
     {% endif %}
+
+    <!-- Check-in button -->
+    <div class="mt-2 border-t border-gray-800 pt-2">
+      <button type="button"
+              onclick="openCheckinModal('{{ url_for('playing.checkin', game_id=game.id) }}', '{{ game.name }}')"
+              class="text-xs text-gray-500 hover:text-indigo-400 transition-colors">
+        + Check In
+      </button>
+    </div>
   </div>
 </div>
 {% endmacro %}
@@ -124,5 +136,178 @@
   </div>
 </details>
 {% endif %}
+
+<!-- Check-in modal (single shared instance) -->
+<div id="checkin-modal"
+     class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+     onclick="if(event.target===this)closeCheckinModal()">
+  <div class="bg-gray-900 rounded-xl p-6 w-full max-w-md shadow-2xl">
+    <h2 class="text-lg font-semibold mb-1">Check In</h2>
+    <p id="checkin-modal-game" class="text-sm text-gray-400 mb-5"></p>
+
+    <form id="checkin-form" method="post" class="flex flex-col gap-4">
+
+      <!-- Enjoyment -->
+      <div>
+        <label class="text-xs text-gray-400 block mb-1">Enjoyment</label>
+        <div class="flex gap-1" id="modal-enjoyment-stars">
+          {% for i in range(1, 6) %}
+            <button type="button" data-group="modal-enjoyment" data-val="{{ i }}"
+                    class="star-btn text-2xl text-gray-600 hover:text-yellow-300 transition-colors">★</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="enjoyment" id="modal-enjoyment-val">
+      </div>
+
+      <!-- Motivation -->
+      <div>
+        <label class="text-xs text-gray-400 block mb-1">Motivation</label>
+        <div class="flex gap-1" id="modal-motivation-stars">
+          {% for i in range(1, 6) %}
+            <button type="button" data-group="modal-motivation" data-val="{{ i }}"
+                    class="star-btn text-2xl text-gray-600 hover:text-yellow-300 transition-colors">★</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="motivation" id="modal-motivation-val">
+      </div>
+
+      <!-- Hours -->
+      <div>
+        <label class="text-xs text-gray-400 block mb-1">Hours this session</label>
+        <input type="number" name="hours_played" id="modal-hours" min="0" max="99" step="0.5"
+               class="w-32 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <!-- Status -->
+      <div>
+        <label class="text-xs text-gray-400 block mb-1">Update status (optional)</label>
+        <select name="status" id="modal-status"
+                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500">
+          <option value="">— no change —</option>
+          <option value="Playing">Playing</option>
+          <option value="On Hold">On Hold</option>
+          <option value="Dropped">Dropped</option>
+          <option value="Completed">Completed</option>
+        </select>
+      </div>
+
+      <!-- Finished checkbox -->
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" name="finished" value="1" id="modal-finished"
+                 class="accent-purple-500 w-4 h-4"
+                 onchange="document.getElementById('finish-survey-fields').classList.toggle('hidden', !this.checked)">
+          <span class="text-sm text-gray-300">Mark as finished <span class="text-gray-500 text-xs">(still playing)</span></span>
+        </label>
+      </div>
+
+      <!-- Finish survey (revealed when checkbox is checked) -->
+      <div id="finish-survey-fields" class="hidden flex flex-col gap-4 border-t border-gray-800 pt-4">
+
+        <div>
+          <label class="text-xs text-gray-400 block mb-1">Overall rating (1–10)</label>
+          <div class="flex gap-1">
+            {% for i in range(1, 11) %}
+              <button type="button" data-group="modal-overall" data-val="{{ i }}"
+                      class="star-btn text-xl text-gray-600 hover:text-yellow-300 transition-colors">★</button>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="overall_rating" id="modal-overall-val">
+        </div>
+
+        <div>
+          <label class="text-xs text-gray-400 block mb-1">Would you play it again?</label>
+          <div class="flex gap-4">
+            {% for opt in ["Yes", "Maybe", "No"] %}
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="would_play_again" value="{{ opt }}" class="accent-indigo-500">
+                <span class="text-sm">{{ opt }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="flex gap-6">
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Total hours to finish</label>
+            <input type="number" name="hours_to_finish" min="1" max="9999"
+                   class="w-28 bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Difficulty</label>
+            <div class="flex gap-1">
+              {% for i in range(1, 6) %}
+                <button type="button" data-group="modal-difficulty" data-val="{{ i }}"
+                        class="star-btn text-xl text-gray-600 hover:text-yellow-300 transition-colors">★</button>
+              {% endfor %}
+            </div>
+            <input type="hidden" name="difficulty" id="modal-difficulty-val">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Note -->
+      <div>
+        <label class="text-xs text-gray-400 block mb-1">Note</label>
+        <textarea name="note" id="modal-note" rows="3"
+                  class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500 resize-y"></textarea>
+      </div>
+
+      <div class="flex gap-3 pt-1">
+        <button type="submit"
+                class="px-5 py-2 bg-indigo-700 hover:bg-indigo-600 rounded text-sm font-medium transition-colors">
+          Save check-in
+        </button>
+        <button type="button" onclick="closeCheckinModal()"
+                class="px-5 py-2 bg-gray-800 hover:bg-gray-700 rounded text-sm transition-colors">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openCheckinModal(action, gameName) {
+  // Reset form
+  document.getElementById('checkin-form').action = action;
+  document.getElementById('checkin-modal-game').textContent = gameName;
+  document.getElementById('modal-enjoyment-val').value  = '';
+  document.getElementById('modal-motivation-val').value = '';
+  document.getElementById('modal-hours').value   = '';
+  document.getElementById('modal-status').value  = '';
+  document.getElementById('modal-note').value    = '';
+  document.getElementById('modal-finished').checked = false;
+  document.getElementById('finish-survey-fields').classList.add('hidden');
+  document.getElementById('modal-overall-val').value    = '';
+  document.getElementById('modal-difficulty-val').value = '';
+  document.querySelectorAll('input[name="would_play_again"]').forEach(function(r) { r.checked = false; });
+  document.querySelector('input[name="hours_to_finish"]').value = '';
+  document.querySelectorAll('#checkin-modal .star-btn').forEach(function(b) {
+    b.classList.remove('text-yellow-400');
+    b.classList.add('text-gray-600');
+  });
+  document.getElementById('checkin-modal').classList.remove('hidden');
+}
+
+function closeCheckinModal() {
+  document.getElementById('checkin-modal').classList.add('hidden');
+}
+
+// Star rating handler
+document.querySelectorAll('.star-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var group = this.dataset.group;
+    var val   = parseInt(this.dataset.val);
+    document.getElementById(group + '-val').value = val;
+    document.querySelectorAll('[data-group="' + group + '"]').forEach(function(b) {
+      var bVal = parseInt(b.dataset.val);
+      b.classList.toggle('text-yellow-400', bVal <= val);
+      b.classList.toggle('text-gray-600',   bVal >  val);
+    });
+  });
+});
+</script>
 
 {% endblock %}
