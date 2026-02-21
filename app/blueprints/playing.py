@@ -126,17 +126,27 @@ def set_status(game_id):
 def checkin(game_id):
     game = db.get_or_404(Game, game_id)
 
-    new_status = request.form.get("status") or None
+    new_status   = request.form.get("status") or None
+    new_enjoyment  = _int(request.form.get("enjoyment"))
+    new_motivation = _int(request.form.get("motivation"))
+
     checkin_obj = CheckIn(
         game_id=game_id,
-        motivation=_int(request.form.get("motivation")),
-        enjoyment=_int(request.form.get("enjoyment")),
+        motivation=new_motivation,
+        enjoyment=new_enjoyment,
         note=request.form.get("note", "").strip() or None,
         hours_played=request.form.get("hours_played") or None,
         status=new_status if new_status in STATUSES else None,
     )
+
     if new_status in STATUSES:
         game.status = new_status
+    if new_enjoyment is not None:
+        game.enjoyment = new_enjoyment
+    if new_motivation is not None:
+        game.motivation = new_motivation
+    if request.form.get("finished"):
+        game.finished = True
 
     db.session.add(checkin_obj)
     try:
