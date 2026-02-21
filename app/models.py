@@ -96,6 +96,17 @@ class Game(db.Model):
     platforms    = db.Column(db.String(300), nullable=True)   # "PC, PS5"
 
     # ------------------------------------------------------------------ #
+    # Finished-game survey                                                 #
+    # ------------------------------------------------------------------ #
+    finished         = db.Column(db.Boolean,  nullable=False, default=False)
+    overall_rating   = db.Column(db.Integer,  nullable=True)   # 1–10
+    would_play_again = db.Column(
+        db.Enum("Yes", "No", "Maybe", name="wpa_enum"), nullable=True
+    )
+    hours_to_finish  = db.Column(db.Integer,  nullable=True)
+    difficulty       = db.Column(db.Integer,  nullable=True)   # 1–5
+
+    # ------------------------------------------------------------------ #
     # Timestamps                                                           #
     # ------------------------------------------------------------------ #
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -104,6 +115,14 @@ class Game(db.Model):
         nullable=False,
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
+    )
+
+    # Reverse relationship populated by CheckIn model below.
+    checkins = db.relationship(
+        "CheckIn",
+        back_populates="game",
+        order_by="CheckIn.created_at.desc()",
+        cascade="all, delete-orphan",
     )
 
     # ------------------------------------------------------------------ #
@@ -134,8 +153,35 @@ class Game(db.Model):
             "mood_intense":     self.mood_intense,
             "mood_story":       self.mood_story,
             "mood_action":      self.mood_action,
-            "mood_exploration": self.mood_exploration,
+            "mood_exploration":  self.mood_exploration,
+            "finished":          self.finished,
+            "overall_rating":    self.overall_rating,
+            "would_play_again":  self.would_play_again,
+            "hours_to_finish":   self.hours_to_finish,
+            "difficulty":        self.difficulty,
         }
 
     def __repr__(self) -> str:
         return f"<Game {self.name!r} [{self.section}/{self.status}]>"
+
+
+class CheckIn(db.Model):
+    __tablename__ = "checkins"
+
+    id           = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    game_id      = db.Column(
+        db.Integer,
+        db.ForeignKey("games.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    motivation   = db.Column(db.Integer, nullable=True)    # 1–5
+    enjoyment    = db.Column(db.Integer, nullable=True)    # 1–5
+    note         = db.Column(db.Text,    nullable=True)
+    hours_played = db.Column(db.Numeric(5, 1), nullable=True)
+    status       = db.Column(db.String(20),    nullable=True)
+    created_at   = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    game = db.relationship("Game", back_populates="checkins")
+
+    def __repr__(self) -> str:
+        return f"<CheckIn game_id={self.game_id} at={self.created_at}>"
