@@ -146,7 +146,11 @@ def checkin(game_id):
     if new_motivation is not None:
         game.motivation = new_motivation
     if request.form.get("finished"):
-        game.finished = True
+        game.finished         = True
+        game.overall_rating   = _int(request.form.get("overall_rating"))
+        game.would_play_again = request.form.get("would_play_again") or None
+        game.hours_to_finish  = _int(request.form.get("hours_to_finish"))
+        game.difficulty       = _int(request.form.get("difficulty"))
 
     db.session.add(checkin_obj)
     try:
