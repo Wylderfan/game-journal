@@ -4,6 +4,9 @@ from app.models import Game, Category
 
 backlog_bp = Blueprint("backlog", __name__)
 
+# ------------------------------------------------------------------ #
+# Helpers                                                              #
+# ------------------------------------------------------------------ #
 
 def _int(value):
     try:
@@ -11,6 +14,49 @@ def _int(value):
     except (ValueError, TypeError):
         return None
 
+
+_LENGTH_SCORES = {"Short": 20, "Medium": 10, "Long": 5, "Very Long": 0}
+
+
+def _play_next_score(hype, estimated_length, series_continuity):
+    """Compute a priority score for play-next ordering (higher = play sooner)."""
+    score  = (hype or 0) * 10                                    # 0–50
+    score += 25 if series_continuity else 0                      # 0 or 25
+    score += _LENGTH_SCORES.get(estimated_length or "", 0)       # 0–20
+    return score  # max 95
+
+
+def _assign_initial_play_next_rank(new_game):
+    """
+    Insert *new_game* into the global play-next list at the position that
+    matches its score.  Shifts all subsequent games' ranks up by 1.
+    """
+    new_score = _play_next_score(
+        new_game.hype, new_game.estimated_length, new_game.series_continuity
+    )
+
+    ranked = (
+        Game.query
+        .filter(Game.section == "backlog", Game.play_next_rank.isnot(None), Game.id != new_game.id)
+        .order_by(Game.play_next_rank)
+        .all()
+    )
+
+    insert_at = len(ranked)  # default: append at end
+    for i, g in enumerate(ranked):
+        if _play_next_score(g.hype, g.estimated_length, g.series_continuity) < new_score:
+            insert_at = i
+            break
+
+    for g in ranked[insert_at:]:
+        g.play_next_rank = g.play_next_rank + 1
+
+    new_game.play_next_rank = insert_at + 1
+
+
+# ------------------------------------------------------------------ #
+# Routes                                                               #
+# ------------------------------------------------------------------ #
 
 @backlog_bp.route("/")
 def index():
@@ -58,8 +104,19 @@ def add():
             release_year=_int(request.form.get("release_year")),
             genres=request.form.get("genres") or None,
             platforms=request.form.get("platforms") or None,
+            # Survey fields
+            hype=_int(request.form.get("hype")),
+            estimated_length=request.form.get("estimated_length") or None,
+            series_continuity=bool(request.form.get("series_continuity")),
+            mood_chill=_int(request.form.get("mood_chill")),
+            mood_intense=_int(request.form.get("mood_intense")),
+            mood_story=_int(request.form.get("mood_story")),
+            mood_action=_int(request.form.get("mood_action")),
+            mood_exploration=_int(request.form.get("mood_exploration")),
         )
         db.session.add(game)
+        _assign_initial_play_next_rank(game)
+
         try:
             db.session.commit()
             flash(f"'{game.name}' added to backlog.", "success")
@@ -89,13 +146,48 @@ def reorder():
         return jsonify({"error": "reorder failed"}), 500
 
 
+@backlog_bp.route("/play-next")
+def play_next():
+    ranked = (
+        Game.query
+        .filter(Game.section == "backlog", Game.play_next_rank.isnot(None))
+        .order_by(Game.play_next_rank)
+        .all()
+    )
+    unranked = (
+        Game.query
+        .filter(Game.section == "backlog", Game.play_next_rank.is_(None))
+        .order_by(Game.name)
+        .all()
+    )
+    return render_template("backlog/play_next.html", ranked=ranked, unranked=unranked)
+
+
+@backlog_bp.route("/play-next/reorder", methods=["POST"])
+def play_next_reorder():
+    """Receives an ordered list of game IDs and updates their play_next_rank fields."""
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, list):
+        return jsonify({"error": "invalid payload"}), 400
+
+    try:
+        for rank, game_id in enumerate(data, start=1):
+            Game.query.filter_by(id=game_id).update({"play_next_rank": rank})
+        db.session.commit()
+        return jsonify({"ok": True})
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": "reorder failed"}), 500
+
+
 @backlog_bp.route("/<int:game_id>/promote", methods=["POST"])
 def promote(game_id):
     game = db.get_or_404(Game, game_id)
-    game.section     = "active"
-    game.status      = "Playing"
-    game.rank        = 0
-    game.category_id = None
+    game.section       = "active"
+    game.status        = "Playing"
+    game.rank          = 0
+    game.category_id   = None
+    game.play_next_rank = None
     try:
         db.session.commit()
         flash(f"'{game.name}' promoted to active library.", "success")

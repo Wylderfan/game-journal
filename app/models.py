@@ -54,6 +54,27 @@ class Game(db.Model):
     # ------------------------------------------------------------------ #
     rank = db.Column(db.Integer, nullable=False, default=0)
 
+    # Cross-category play-next rank (1 = play first).  Null for games that
+    # pre-date the feature or were added without the survey.
+    play_next_rank = db.Column(db.Integer, nullable=True)
+
+    # ------------------------------------------------------------------ #
+    # Play-next survey (backlog only)                                      #
+    # ------------------------------------------------------------------ #
+    hype             = db.Column(db.Integer, nullable=True)   # 1–5
+    estimated_length = db.Column(
+        db.Enum("Short", "Medium", "Long", "Very Long", name="length_enum"),
+        nullable=True,
+    )
+    series_continuity = db.Column(db.Boolean, nullable=True, default=False)
+
+    # Mood blend sliders (0–5 each)
+    mood_chill       = db.Column(db.Integer, nullable=True)
+    mood_intense     = db.Column(db.Integer, nullable=True)
+    mood_story       = db.Column(db.Integer, nullable=True)
+    mood_action      = db.Column(db.Integer, nullable=True)
+    mood_exploration = db.Column(db.Integer, nullable=True)
+
     # SET NULL so deleting a category orphans its games rather than
     # raising a foreign-key violation.
     category_id = db.Column(
@@ -98,11 +119,20 @@ class Game(db.Model):
             "notes":        self.notes,
             "rank":         self.rank,
             "category_id":  self.category_id,
-            "rawg_id":      self.rawg_id,
-            "cover_url":    self.cover_url,
-            "release_year": self.release_year,
-            "genres":       self.genres,
-            "platforms":    self.platforms,
+            "rawg_id":          self.rawg_id,
+            "cover_url":        self.cover_url,
+            "release_year":     self.release_year,
+            "genres":           self.genres,
+            "platforms":        self.platforms,
+            "play_next_rank":   self.play_next_rank,
+            "hype":             self.hype,
+            "estimated_length": self.estimated_length,
+            "series_continuity":self.series_continuity,
+            "mood_chill":       self.mood_chill,
+            "mood_intense":     self.mood_intense,
+            "mood_story":       self.mood_story,
+            "mood_action":      self.mood_action,
+            "mood_exploration": self.mood_exploration,
         }
 
     def __repr__(self) -> str:

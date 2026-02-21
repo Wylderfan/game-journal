@@ -55,6 +55,69 @@
       </p>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- Play Next Survey                                              -->
+    <!-- ============================================================ -->
+    <div class="border border-gray-700 rounded-lg p-4 mb-6">
+      <h2 class="text-sm font-semibold text-gray-300 mb-4">Play Next Survey
+        <span class="text-xs text-gray-500 font-normal ml-1">— helps rank this game in your play-next list</span>
+      </h2>
+
+      <!-- Hype -->
+      <div class="mb-5">
+        <label class="block text-sm text-gray-400 mb-2">Hype — how excited are you to play this?</label>
+        <div class="flex gap-1" id="hype-stars">
+          {% for i in range(1, 6) %}
+            <button type="button" data-group="hype" data-val="{{ i }}"
+                    class="star-btn text-2xl text-gray-600 hover:text-yellow-300 transition-colors">★</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="hype" id="hype-val" value="">
+      </div>
+
+      <!-- Estimated length -->
+      <div class="mb-5">
+        <label class="block text-sm text-gray-400 mb-1" for="estimated_length">Estimated length</label>
+        <select id="estimated_length" name="estimated_length"
+                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+          <option value="">— Not sure —</option>
+          <option value="Short">Short  (&lt;5 h)</option>
+          <option value="Medium">Medium  (5–20 h)</option>
+          <option value="Long">Long  (20–50 h)</option>
+          <option value="Very Long">Very Long  (50 h+)</option>
+        </select>
+      </div>
+
+      <!-- Series continuity -->
+      <div class="mb-5">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" name="series_continuity" value="1"
+                 class="w-4 h-4 accent-indigo-500">
+          <span class="text-sm text-gray-300">Part of a series I'm actively playing through</span>
+        </label>
+      </div>
+
+      <!-- Mood blend sliders -->
+      <div>
+        <label class="block text-sm text-gray-400 mb-3">Mood blend — drag to describe the game's vibe</label>
+        <div class="space-y-3">
+          {% for mood in [('chill', 'Chill', 'text-sky-400'), ('intense', 'Intense', 'text-red-400'),
+                          ('story', 'Story', 'text-purple-400'), ('action', 'Action', 'text-orange-400'),
+                          ('exploration', 'Exploration', 'text-green-400')] %}
+          <div class="flex items-center gap-3">
+            <span class="w-24 text-xs {{ mood[2] }} shrink-0">{{ mood[1] }}</span>
+            <input type="range" name="mood_{{ mood[0] }}" id="mood_{{ mood[0] }}"
+                   min="0" max="5" value="0"
+                   class="flex-1 accent-indigo-500"
+                   oninput="document.getElementById('mood_{{ mood[0] }}_val').textContent = this.value">
+            <span id="mood_{{ mood[0] }}_val" class="w-4 text-xs text-gray-400 text-right shrink-0">0</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <!-- ============================================================ -->
+
     <div class="flex gap-3">
       <button type="submit"
               class="px-5 py-2 bg-indigo-700 hover:bg-indigo-600 rounded text-sm font-medium transition-colors">
@@ -69,6 +132,21 @@
 </div>
 
 <script>
+// Star rating (hype)
+document.querySelectorAll('.star-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var group = this.dataset.group;
+    var val   = parseInt(this.dataset.val);
+    document.getElementById(group + '-val').value = val;
+    document.querySelectorAll('[data-group="' + group + '"]').forEach(function(b) {
+      var bVal = parseInt(b.dataset.val);
+      b.classList.toggle('text-yellow-400', bVal <= val);
+      b.classList.toggle('text-gray-600',   bVal >  val);
+    });
+  });
+});
+
+// RAWG search
 function doSearch() {
   var q = document.getElementById('rawg-search').value.trim();
   if (!q) return;

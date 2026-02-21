@@ -16,6 +16,15 @@ def index():
     categories = Category.query.order_by(Category.name).all()
     top_backlog = [cat.games[0] for cat in categories if cat.games]
 
+    # Top 5 games from the global play-next ranking
+    play_next = (
+        Game.query
+        .filter(Game.section == "backlog", Game.play_next_rank.isnot(None))
+        .order_by(Game.play_next_rank)
+        .limit(5)
+        .all()
+    )
+
     return render_template(
         "main/index.html",
         playing_count=playing_count,
@@ -23,6 +32,7 @@ def index():
         backlog_count=backlog_count,
         completed_count=completed_count,
         top_backlog=top_backlog,
+        play_next=play_next,
     )
 
 
