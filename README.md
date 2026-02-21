@@ -75,6 +75,27 @@ game-journal/
 
 ---
 
+## RAWG API
+
+RAWG provides game metadata — cover art, release year, genres, and platforms. It is **optional**; every form works without it, you just won't get search suggestions or cover images.
+
+**Getting a key**
+1. Create a free account at [rawg.io](https://rawg.io)
+2. Go to [rawg.io/apidocs](https://rawg.io/apidocs) and generate an API key
+3. Add it to your `.env` as `RAWG_API_KEY`
+
+The free tier allows 20,000 requests/month, which is well beyond what a personal journal will ever use.
+
+**What it's used for**
+- The add/edit forms include a search box that queries RAWG as you type (`/api/games/search?q=`). Selecting a result pre-fills the game name and stores the cover URL, release year, genres, and platforms.
+- `flask seed` fetches cover art from RAWG for the example games if the key is set.
+- Cover images are CDN URLs loaded directly by the browser — nothing is stored locally.
+
+**Without a key**
+If `RAWG_API_KEY` is not set, the search endpoint returns `[]` silently and the search box simply does nothing. You can still add games manually by typing the name directly.
+
+---
+
 ## Setup
 
 **1. Install dependencies**
