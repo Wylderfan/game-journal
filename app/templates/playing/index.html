@@ -1,16 +1,9 @@
 {% extends "base.html" %}
+{% from "macros.html" import stars %}
 {% block title %}Playing — Game Journal{% endblock %}
 
 {% block content %}
 <h1 class="text-2xl font-bold mb-8">Active Library</h1>
-
-{% macro stars(value, max=5) %}
-  <span class="text-yellow-400 tracking-tight">
-    {% for i in range(1, max + 1) %}
-      {% if value and i <= value %}★{% else %}<span class="text-gray-600">★</span>{% endif %}
-    {% endfor %}
-  </span>
-{% endmacro %}
 
 {% macro status_badge(status) %}
   {% if status == "Playing" %}
@@ -86,8 +79,9 @@
     <!-- Check-in button -->
     <div class="mt-2 border-t border-gray-800 pt-2">
       <button type="button"
-              onclick="openCheckinModal('{{ url_for('playing.checkin', game_id=game.id) }}', '{{ game.name }}')"
-              class="text-xs text-gray-500 hover:text-indigo-400 transition-colors">
+              class="js-checkin-btn text-xs text-gray-500 hover:text-indigo-400 transition-colors"
+              data-action="{{ url_for('playing.checkin', game_id=game.id) }}"
+              data-name="{{ game.name }}">
         + Check In
       </button>
     </div>
@@ -269,6 +263,12 @@
 </div>
 
 <script>
+document.querySelectorAll('.js-checkin-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    openCheckinModal(this.dataset.action, this.dataset.name);
+  });
+});
+
 function openCheckinModal(action, gameName) {
   // Reset form
   document.getElementById('checkin-form').action = action;
@@ -295,19 +295,6 @@ function closeCheckinModal() {
   document.getElementById('checkin-modal').classList.add('hidden');
 }
 
-// Star rating handler
-document.querySelectorAll('.star-btn').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    var group = this.dataset.group;
-    var val   = parseInt(this.dataset.val);
-    document.getElementById(group + '-val').value = val;
-    document.querySelectorAll('[data-group="' + group + '"]').forEach(function(b) {
-      var bVal = parseInt(b.dataset.val);
-      b.classList.toggle('text-yellow-400', bVal <= val);
-      b.classList.toggle('text-gray-600',   bVal >  val);
-    });
-  });
-});
 </script>
 
 {% endblock %}

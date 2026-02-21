@@ -1,19 +1,13 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
 from app import db
 from app.models import Game, Category
+from app.utils.helpers import _int
 
 backlog_bp = Blueprint("backlog", __name__)
 
 # ------------------------------------------------------------------ #
 # Helpers                                                              #
 # ------------------------------------------------------------------ #
-
-def _int(value):
-    try:
-        return int(value) if value else None
-    except (ValueError, TypeError):
-        return None
-
 
 _LENGTH_SCORES = {"Short": 20, "Medium": 10, "Long": 5, "Very Long": 0}
 

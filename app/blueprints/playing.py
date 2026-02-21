@@ -1,17 +1,9 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from app import db
-from app.models import Game, CheckIn
+from app.models import Game, CheckIn, STATUSES
+from app.utils.helpers import _int, _float
 
 playing_bp = Blueprint("playing", __name__)
-
-STATUSES = ["Playing", "On Hold", "Dropped", "Completed"]
-
-
-def _int(value):
-    try:
-        return int(value) if value else None
-    except (ValueError, TypeError):
-        return None
 
 
 @playing_bp.route("/")
@@ -135,7 +127,7 @@ def checkin(game_id):
         motivation=new_motivation,
         enjoyment=new_enjoyment,
         note=request.form.get("note", "").strip() or None,
-        hours_played=request.form.get("hours_played") or None,
+        hours_played=_float(request.form.get("hours_played")),
         status=new_status if new_status in STATUSES else None,
     )
 
