@@ -13,28 +13,6 @@ CATEGORIES = [
     "Strategy",
 ]
 
-ACTIVE_GAMES = [
-    {
-        "name": "Disco Elysium",
-        "section": "active",
-        "status": "Playing",
-        "enjoyment": 5,
-        "motivation": 4,
-        "notes": "Absolutely wild writing. Playing the detective badly on purpose.",
-        "genres": "RPG",
-        "platforms": "PC, PS4, PS5",
-        "release_year": 2019,
-        "hype": 5,
-        "estimated_length": "Medium",
-        "series_continuity": False,
-        "mood_chill": 4,
-        "mood_intense": 2,
-        "mood_story": 5,
-        "mood_action": 1,
-        "mood_exploration": 3,
-    },
-]
-
 # (game data, category name)
 # Survey fields: hype (1-5), estimated_length, series_continuity,
 #                mood_chill/intense/story/action/exploration (0-5 each)
@@ -176,12 +154,6 @@ def seed_command():
         cats[name] = c
     db.session.flush()
 
-    click.echo("Creating active games...")
-    for data in ACTIVE_GAMES:
-        click.echo(f"  {data['name']}...")
-        meta = _rawg_meta(data["name"])
-        db.session.add(Game(**{**data, **meta}))
-
     click.echo("Creating backlog games...")
     for data, cat_name in BACKLOG_GAMES:
         click.echo(f"  {data['name']}...")
@@ -189,4 +161,4 @@ def seed_command():
         db.session.add(Game(**{**data, **meta, "rank": 0, "category_id": cats[cat_name].id}))
 
     db.session.commit()
-    click.echo(f"Done. {len(ACTIVE_GAMES)} active, {len(BACKLOG_GAMES)} backlog games seeded.")
+    click.echo(f"Done. {len(BACKLOG_GAMES)} backlog games seeded.")
