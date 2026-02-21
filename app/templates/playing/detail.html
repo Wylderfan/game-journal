@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import stars %}
 {% block title %}{{ game.name }} — Game Journal{% endblock %}
 
 {% block content %}
@@ -75,20 +76,12 @@
     <div class="flex flex-col gap-2 text-sm">
       <div class="flex items-center gap-3">
         <span class="w-20 text-gray-400">Enjoyment</span>
-        <span class="text-yellow-400 tracking-tight">
-          {% for i in range(1, 6) %}
-            {% if game.enjoyment and i <= game.enjoyment %}★{% else %}<span class="text-gray-700">★</span>{% endif %}
-          {% endfor %}
-        </span>
+        {{ stars(game.enjoyment) }}
         {% if not game.enjoyment %}<span class="text-gray-600 text-xs">unrated</span>{% endif %}
       </div>
       <div class="flex items-center gap-3">
         <span class="w-20 text-gray-400">Motivation</span>
-        <span class="text-yellow-400 tracking-tight">
-          {% for i in range(1, 6) %}
-            {% if game.motivation and i <= game.motivation %}★{% else %}<span class="text-gray-700">★</span>{% endif %}
-          {% endfor %}
-        </span>
+        {{ stars(game.motivation) }}
         {% if not game.motivation %}<span class="text-gray-600 text-xs">unrated</span>{% endif %}
       </div>
     </div>
@@ -118,11 +111,7 @@
       <div class="flex items-center gap-3">
         <span class="w-28 text-gray-400">Overall rating</span>
         {% if game.overall_rating %}
-          <span class="text-yellow-400 tracking-tight">
-            {% for i in range(1, 11) %}
-              {% if i <= game.overall_rating %}★{% else %}<span class="text-gray-700">★</span>{% endif %}
-            {% endfor %}
-          </span>
+          {{ stars(game.overall_rating, max=10) }}
           <span class="text-gray-500 text-xs">({{ game.overall_rating }}/10)</span>
         {% else %}
           <span class="text-gray-600 text-xs">unrated</span>
@@ -139,11 +128,7 @@
       <div class="flex items-center gap-3">
         <span class="w-28 text-gray-400">Difficulty</span>
         {% if game.difficulty %}
-          <span class="text-yellow-400 tracking-tight">
-            {% for i in range(1, 6) %}
-              {% if i <= game.difficulty %}★{% else %}<span class="text-gray-700">★</span>{% endif %}
-            {% endfor %}
-          </span>
+          {{ stars(game.difficulty) }}
         {% else %}
           <span class="text-gray-600 text-xs">unrated</span>
         {% endif %}
@@ -176,18 +161,10 @@
         </div>
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 mb-1">
           {% if ci.enjoyment %}
-            <span>Enjoyment
-              <span class="text-yellow-400">
-                {% for i in range(1, 6) %}{% if i <= ci.enjoyment %}★{% else %}<span class="text-gray-700">★</span>{% endif %}{% endfor %}
-              </span>
-            </span>
+            <span>Enjoyment {{ stars(ci.enjoyment) }}</span>
           {% endif %}
           {% if ci.motivation %}
-            <span>Motivation
-              <span class="text-yellow-400">
-                {% for i in range(1, 6) %}{% if i <= ci.motivation %}★{% else %}<span class="text-gray-700">★</span>{% endif %}{% endfor %}
-              </span>
-            </span>
+            <span>Motivation {{ stars(ci.motivation) }}</span>
           {% endif %}
           {% if ci.hours_played %}
             <span>{{ ci.hours_played }}h</span>

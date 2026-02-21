@@ -132,20 +132,6 @@
 </div>
 
 <script>
-// Star rating (hype)
-document.querySelectorAll('.star-btn').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    var group = this.dataset.group;
-    var val   = parseInt(this.dataset.val);
-    document.getElementById(group + '-val').value = val;
-    document.querySelectorAll('[data-group="' + group + '"]').forEach(function(b) {
-      var bVal = parseInt(b.dataset.val);
-      b.classList.toggle('text-yellow-400', bVal <= val);
-      b.classList.toggle('text-gray-600',   bVal >  val);
-    });
-  });
-});
-
 // RAWG search
 function doSearch() {
   var q = document.getElementById('rawg-search').value.trim();

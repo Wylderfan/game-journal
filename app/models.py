@@ -1,6 +1,8 @@
 from datetime import datetime
 from app import db
 
+STATUSES = ["Playing", "On Hold", "Dropped", "Completed"]
+
 
 class Category(db.Model):
     __tablename__ = "categories"

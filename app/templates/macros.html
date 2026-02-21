@@ -1,0 +1,1 @@
+{% macro stars(value, max=5) %}<span class="text-yellow-400 tracking-tight">{% for i in range(1, max + 1) %}{% if value and i <= value %}★{% else %}<span class="text-gray-600">★</span>{% endif %}{% endfor %}</span>{% endmacro %}

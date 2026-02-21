@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import stars %}
 {% block title %}Play Next — Game Journal{% endblock %}
 
 {% block content %}
@@ -70,9 +71,7 @@
           <span class="text-xs text-indigo-400 font-medium">Series</span>
         {% endif %}
         {% if game.hype %}
-          <span class="text-xs text-yellow-400" title="Hype: {{ game.hype }}/5">
-            {% for i in range(1, 6) %}{{ '★' if i <= game.hype else '☆' }}{% endfor %}
-          </span>
+          <span class="text-xs" title="Hype: {{ game.hype }}/5">{{ stars(game.hype) }}</span>
         {% endif %}
         {{ mood_bars(game) }}
       </div>
