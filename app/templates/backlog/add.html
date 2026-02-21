@@ -40,17 +40,20 @@
              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
     </div>
 
-    <!-- Category -->
+    <!-- Categories -->
     <div class="mb-6">
-      <label class="block text-sm text-gray-400 mb-1" for="category_id">Category</label>
-      <select id="category_id" name="category_id"
-              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
-        <option value="">— Uncategorized —</option>
+      <label class="block text-sm text-gray-400 mb-2">Categories</label>
+      <div class="flex flex-col gap-1.5" id="category-checkboxes">
         {% for cat in categories %}
-          <option value="{{ cat.id }}" data-genre="{{ cat.name }}">{{ cat.name }}</option>
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" name="category_ids" value="{{ cat.id }}"
+                   data-genre="{{ cat.name }}"
+                   class="w-4 h-4 accent-indigo-500">
+            <span class="text-sm text-gray-300">{{ cat.name }}</span>
+          </label>
         {% endfor %}
-      </select>
-      <p class="text-xs text-gray-600 mt-1">
+      </div>
+      <p class="text-xs text-gray-600 mt-2">
         <a href="{{ url_for('backlog.categories') }}" class="hover:text-gray-400">Manage categories →</a>
       </p>
     </div>
@@ -173,6 +176,12 @@ function fillFromRawg(g) {
   }
   document.getElementById('rawg-results').classList.add('hidden');
   document.getElementById('rawg-search').value = '';
+
+  // Auto-check categories matching RAWG genres
+  var genres = (g.genres || '').split(', ').map(function(s) { return s.trim(); });
+  document.querySelectorAll('#category-checkboxes input[type="checkbox"]').forEach(function(cb) {
+    cb.checked = genres.indexOf(cb.dataset.genre) !== -1;
+  });
 }
 
 document.addEventListener('click', function(e) {
