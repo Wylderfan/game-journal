@@ -52,7 +52,8 @@ def backup_command(output_dir):
         f"--port={db['port']}",
         f"--user={db['user']}",
         f"--password={db['password']}",
-        "--ssl-mode=SKIP_VERIFY",
+        "--skip-ssl",
+        "--no-tablespaces",
         "--single-transaction",
         "--routines",
         "--triggers",
@@ -99,7 +100,7 @@ def restore_command(filepath, yes):
         f"--port={db['port']}",
         f"--user={db['user']}",
         f"--password={db['password']}",
-        "--ssl-mode=SKIP_VERIFY",
+        "--skip-ssl",
         db["dbname"],
     ]
 
