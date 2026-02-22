@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ game.name }} — Game Journal{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+  <h1 class="text-2xl font-bold mb-6">Edit Game</h1>
+
+  <form method="post" action="{{ url_for('backlog.edit', game_id=game.id) }}">
+
+    <!-- RAWG search -->
+    <div class="mb-5">
+      <label class="block text-sm text-gray-400 mb-1">Search RAWG (optional)</label>
+      <div class="flex gap-2">
+        <input id="rawg-search" type="text" placeholder="Search by title…"
+               class="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+        <button type="button" onclick="doSearch()"
+                class="px-4 py-2 bg-indigo-700 hover:bg-indigo-600 rounded text-sm transition-colors">
+          Search
+        </button>
+      </div>
+      <div id="rawg-results" class="hidden mt-1 bg-gray-800 border border-gray-700 rounded divide-y divide-gray-700"></div>
+    </div>
+
+    <!-- Cover preview -->
+    <div id="cover-preview" class="{{ 'hidden' if not game.cover_url }} mb-5">
+      <img id="cover-img" src="{{ game.cover_url or '' }}" alt="Cover art" class="w-24 h-32 object-cover rounded">
+    </div>
+
+    <!-- Hidden RAWG metadata -->
+    <input type="hidden" name="rawg_id"      id="rawg_id"      value="{{ game.rawg_id or '' }}">
+    <input type="hidden" name="cover_url"    id="cover_url"    value="{{ game.cover_url or '' }}">
+    <input type="hidden" name="release_year" id="release_year" value="{{ game.release_year or '' }}">
+    <input type="hidden" name="genres"       id="genres"       value="{{ game.genres or '' }}">
+    <input type="hidden" name="platforms"    id="platforms"    value="{{ game.platforms or '' }}">
+
+    <!-- Name -->
+    <div class="mb-4">
+      <label class="block text-sm text-gray-400 mb-1" for="name">Game name <span class="text-red-400">*</span></label>
+      <input id="name" name="name" type="text" required
+             value="{{ game.name }}"
+             class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+    </div>
+
+    <!-- Categories -->
+    <div class="mb-6">
+      <label class="block text-sm text-gray-400 mb-2">Categories</label>
+      <div class="flex flex-col gap-1.5" id="category-checkboxes">
+        {% for cat in categories %}
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" name="category_ids" value="{{ cat.id }}"
+                   data-genre="{{ cat.name }}"
+                   {{ 'checked' if cat in game.categories }}
+                   class="w-4 h-4 accent-indigo-500">
+            <span class="text-sm text-gray-300">{{ cat.name }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <p class="text-xs text-gray-600 mt-2">
+        <a href="{{ url_for('backlog.categories') }}" class="hover:text-gray-400">Manage categories →</a>
+      </p>
+    </div>
+
+    <!-- Notes -->
+    <div class="mb-4">
+      <label class="block text-sm text-gray-400 mb-1" for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="3"
+                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 resize-y">{{ game.notes or '' }}</textarea>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Play Next Survey                                              -->
+    <!-- ============================================================ -->
+    <div class="border border-gray-700 rounded-lg p-4 mb-6">
+      <h2 class="text-sm font-semibold text-gray-300 mb-4">Play Next Survey
+        <span class="text-xs text-gray-500 font-normal ml-1">— helps rank this game in your play-next list</span>
+      </h2>
+
+      <!-- Hype -->
+      <div class="mb-5">
+        <label class="block text-sm text-gray-400 mb-2">Motivation & Excitement — how motivated and excited are you to play this?</label>
+        <div class="flex gap-1" id="hype-stars">
+          {% for i in range(1, 6) %}
+            <button type="button" data-group="hype" data-val="{{ i }}"
+                    class="star-btn text-2xl {{ 'text-yellow-400' if game.hype and i <= game.hype else 'text-gray-600' }} hover:text-yellow-300 transition-colors">★</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="hype" id="hype-val" value="{{ game.hype or '' }}">
+      </div>
+
+      <!-- Estimated length -->
+      <div class="mb-5">
+        <label class="block text-sm text-gray-400 mb-1" for="estimated_length">Estimated length</label>
+        <select id="estimated_length" name="estimated_length"
+                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+          <option value="">— Not sure —</option>
+          {% for opt in ["Short", "Medium", "Long", "Very Long"] %}
+            <option value="{{ opt }}" {{ 'selected' if game.estimated_length == opt }}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Series continuity -->
+      <div class="mb-5">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" name="series_continuity" value="1"
+                 {{ 'checked' if game.series_continuity }}
+                 class="w-4 h-4 accent-indigo-500">
+          <span class="text-sm text-gray-300">Part of a series I'm actively playing through</span>
+        </label>
+      </div>
+
+      <!-- Mood blend sliders -->
+      <div>
+        <label class="block text-sm text-gray-400 mb-3">Mood blend — drag to describe the game's vibe</label>
+        <div class="space-y-3">
+          {% for mood, label, color in [('chill', 'Chill', 'text-sky-400'), ('intense', 'Intense', 'text-red-400'),
+                                        ('story', 'Story', 'text-purple-400'), ('action', 'Action', 'text-orange-400'),
+                                        ('exploration', 'Exploration', 'text-green-400')] %}
+          <div class="flex items-center gap-3">
+            <span class="w-24 text-xs {{ color }} shrink-0">{{ label }}</span>
+            <input type="range" name="mood_{{ mood }}" id="mood_{{ mood }}"
+                   min="0" max="5" value="{{ game['mood_' ~ mood] or 0 }}"
+                   class="flex-1 accent-indigo-500"
+                   oninput="document.getElementById('mood_{{ mood }}_val').textContent = this.value">
+            <span id="mood_{{ mood }}_val" class="w-4 text-xs text-gray-400 text-right shrink-0">{{ game['mood_' ~ mood] or 0 }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <!-- ============================================================ -->
+
+    <div class="flex gap-3">
+      <button type="submit"
+              class="px-5 py-2 bg-indigo-700 hover:bg-indigo-600 rounded text-sm font-medium transition-colors">
+        Save changes
+      </button>
+      <a href="{{ url_for('backlog.index') }}"
+         class="px-5 py-2 bg-gray-800 hover:bg-gray-700 rounded text-sm transition-colors">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+
+<script>
+// RAWG search
+function doSearch() {
+  var q = document.getElementById('rawg-search').value.trim();
+  if (!q) return;
+  fetch('/api/games/search?q=' + encodeURIComponent(q))
+    .then(function(r) { return r.json(); })
+    .then(function(results) {
+      var box = document.getElementById('rawg-results');
+      box.innerHTML = '';
+      if (!results.length) {
+        box.innerHTML = '<p class="text-sm text-gray-500 px-3 py-2">No results.</p>';
+        box.classList.remove('hidden');
+        return;
+      }
+      results.forEach(function(g) {
+        var div = document.createElement('div');
+        div.className = 'flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-700 transition-colors';
+        div.innerHTML =
+          (g.cover_url ? '<img src="' + g.cover_url + '" class="w-8 h-10 object-cover rounded shrink-0">' : '<div class="w-8 h-10 bg-gray-700 rounded shrink-0"></div>') +
+          '<div class="min-w-0"><p class="text-sm font-medium truncate">' + g.name + '</p>' +
+          (g.release_year ? '<p class="text-xs text-gray-500">' + g.release_year + '</p>' : '') + '</div>';
+        div.addEventListener('click', function() { fillFromRawg(g); });
+        box.appendChild(div);
+      });
+      box.classList.remove('hidden');
+    });
+}
+
+function fillFromRawg(g) {
+  document.getElementById('name').value         = g.name;
+  document.getElementById('rawg_id').value      = g.id || '';
+  document.getElementById('cover_url').value    = g.cover_url || '';
+  document.getElementById('release_year').value = g.release_year || '';
+  document.getElementById('genres').value       = g.genres || '';
+  document.getElementById('platforms').value    = g.platforms || '';
+  if (g.cover_url) {
+    document.getElementById('cover-img').src = g.cover_url;
+    document.getElementById('cover-preview').classList.remove('hidden');
+  }
+  document.getElementById('rawg-results').classList.add('hidden');
+  document.getElementById('rawg-search').value = '';
+
+  // Auto-check categories matching RAWG genres
+  var genres = (g.genres || '').split(', ').map(function(s) { return s.trim(); });
+  document.querySelectorAll('#category-checkboxes input[type="checkbox"]').forEach(function(cb) {
+    cb.checked = genres.indexOf(cb.dataset.genre) !== -1;
+  });
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#rawg-results') && e.target.id !== 'rawg-search') {
+    document.getElementById('rawg-results').classList.add('hidden');
+  }
+});
+
+document.getElementById('rawg-search').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+});
+</script>
+{% endblock %}
