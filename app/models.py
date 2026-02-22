@@ -4,13 +4,6 @@ from app import db
 STATUSES = ["Playing", "On Hold", "Dropped", "Completed"]
 
 
-game_categories = db.Table(
-    "game_categories",
-    db.Column("game_id",     db.Integer, db.ForeignKey("games.id",      ondelete="CASCADE"), primary_key=True),
-    db.Column("category_id", db.Integer, db.ForeignKey("categories.id", ondelete="CASCADE"), primary_key=True),
-)
-
-
 class Category(db.Model):
     __tablename__ = "categories"
 
@@ -19,99 +12,98 @@ class Category(db.Model):
     # Priority order for play-next scoring (1 = most interested in right now).
     rank = db.Column(db.Integer, nullable=False, default=0)
 
-    # Many categories <-> many games, ordered alphabetically.
-    games = db.relationship(
-        "Game",
-        secondary="game_categories",
-        back_populates="categories",
-        order_by="Game.name",
-    )
-
     def __repr__(self) -> str:
         return f"<Category {self.name!r}>"
 
 
 class Game(db.Model):
+    """Shared game record — RAWG metadata only. Per-profile data lives in ProfileGame."""
     __tablename__ = "games"
 
-    # ------------------------------------------------------------------ #
-    # Core identity                                                        #
-    # ------------------------------------------------------------------ #
-    id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String(200), nullable=False)
+    id           = db.Column(db.Integer,     primary_key=True, autoincrement=True)
+    name         = db.Column(db.String(200), nullable=False)
+    rawg_id      = db.Column(db.Integer,     nullable=True, unique=True)
+    cover_url    = db.Column(db.String(500), nullable=True)
+    release_year = db.Column(db.Integer,     nullable=True)
+    genres       = db.Column(db.String(200), nullable=True)   # "RPG, Action"
+    platforms    = db.Column(db.String(300), nullable=True)   # "PC, PS5"
+    created_at   = db.Column(db.DateTime,   nullable=False, default=datetime.utcnow)
 
-    # Which half of the app this game lives in.
+    # One game can have many per-profile entries (one per profile that tracks it).
+    profile_games = db.relationship(
+        "ProfileGame",
+        back_populates="game",
+        cascade="all, delete-orphan",
+    )
+
+    def to_dict(self) -> dict:
+        return {
+            "id":           self.id,
+            "name":         self.name,
+            "rawg_id":      self.rawg_id,
+            "cover_url":    self.cover_url,
+            "release_year": self.release_year,
+            "genres":       self.genres,
+            "platforms":    self.platforms,
+        }
+
+    def __repr__(self) -> str:
+        return f"<Game {self.name!r}>"
+
+
+class ProfileGame(db.Model):
+    """Per-profile tracking data for a game."""
+    __tablename__ = "profile_games"
+
+    id         = db.Column(db.Integer,      primary_key=True, autoincrement=True)
+    profile_id = db.Column(db.String(100),  nullable=False)
+    game_id    = db.Column(db.Integer,      db.ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
+
+    # ------------------------------------------------------------------ #
+    # Library placement                                                    #
+    # ------------------------------------------------------------------ #
     section = db.Column(
-        db.Enum("active", "backlog", name="section_enum"),
+        db.Enum("active", "backlog", name="pg_section_enum"),
         nullable=False,
     )
-
-    # Lifecycle status — only meaningful for active games.
     status = db.Column(
-        db.Enum("Playing", "On Hold", "Dropped", "Completed", name="status_enum"),
+        db.Enum("Playing", "On Hold", "Dropped", "Completed", name="pg_status_enum"),
         nullable=True,
     )
-
-    # ------------------------------------------------------------------ #
-    # Personal tracking                                                    #
-    # ------------------------------------------------------------------ #
-    enjoyment  = db.Column(db.Integer, nullable=True)   # 1–5; null = unrated
-    motivation = db.Column(db.Integer, nullable=True)   # 1–5; null = unrated
-    notes      = db.Column(db.Text,    nullable=True)
-
-    # ------------------------------------------------------------------ #
-    # Backlog ordering                                                     #
-    # ------------------------------------------------------------------ #
-    rank = db.Column(db.Integer, nullable=False, default=0)
-
-    # Cross-category play-next rank (1 = play first).  Null for games that
-    # pre-date the feature or were added without the survey.
+    rank           = db.Column(db.Integer, nullable=False, default=0)
     play_next_rank = db.Column(db.Integer, nullable=True)
 
     # ------------------------------------------------------------------ #
-    # Play-next survey (backlog only)                                      #
+    # Play-next survey                                                     #
     # ------------------------------------------------------------------ #
-    hype             = db.Column(db.Integer, nullable=True)   # 1–5
+    hype             = db.Column(db.Integer, nullable=True)
     estimated_length = db.Column(
-        db.Enum("Short", "Medium", "Long", "Very Long", name="length_enum"),
+        db.Enum("Short", "Medium", "Long", "Very Long", name="pg_length_enum"),
         nullable=True,
     )
     series_continuity = db.Column(db.Boolean, nullable=True, default=False)
 
-    # Mood blend sliders (0–5 each)
     mood_chill       = db.Column(db.Integer, nullable=True)
     mood_intense     = db.Column(db.Integer, nullable=True)
     mood_story       = db.Column(db.Integer, nullable=True)
     mood_action      = db.Column(db.Integer, nullable=True)
     mood_exploration = db.Column(db.Integer, nullable=True)
 
-    # Many games <-> many categories.
-    categories = db.relationship(
-        "Category",
-        secondary="game_categories",
-        back_populates="games",
-        order_by="Category.rank",
-    )
-
     # ------------------------------------------------------------------ #
-    # RAWG metadata (optional — populated at add time via API lookup)     #
+    # Personal tracking                                                    #
     # ------------------------------------------------------------------ #
-    rawg_id      = db.Column(db.Integer,     nullable=True)
-    cover_url    = db.Column(db.String(500), nullable=True)
-    release_year = db.Column(db.Integer,     nullable=True)
-    genres       = db.Column(db.String(200), nullable=True)   # "RPG, Action"
-    platforms    = db.Column(db.String(300), nullable=True)   # "PC, PS5"
+    notes = db.Column(db.Text, nullable=True)
 
     # ------------------------------------------------------------------ #
     # Finished-game survey                                                 #
     # ------------------------------------------------------------------ #
-    finished         = db.Column(db.Boolean,  nullable=False, default=False)
-    overall_rating   = db.Column(db.Integer,  nullable=True)   # 1–10
+    finished         = db.Column(db.Boolean, nullable=False, default=False)
+    overall_rating   = db.Column(db.Integer, nullable=True)
     would_play_again = db.Column(
-        db.Enum("Yes", "No", "Maybe", name="wpa_enum"), nullable=True
+        db.Enum("Yes", "No", "Maybe", name="pg_wpa_enum"), nullable=True
     )
-    hours_to_finish  = db.Column(db.Integer,  nullable=True)
-    difficulty       = db.Column(db.Integer,  nullable=True)   # 1–5
+    hours_to_finish = db.Column(db.Integer, nullable=True)
+    difficulty      = db.Column(db.Integer, nullable=True)
 
     # ------------------------------------------------------------------ #
     # Timestamps                                                           #
@@ -124,52 +116,16 @@ class Game(db.Model):
         onupdate=datetime.utcnow,
     )
 
-    # Reverse relationship populated by CheckIn model below.
-    checkins = db.relationship(
-        "CheckIn",
-        back_populates="game",
-        order_by="CheckIn.created_at.desc()",
-        cascade="all, delete-orphan",
-    )
+    # ------------------------------------------------------------------ #
+    # Relationships                                                        #
+    # ------------------------------------------------------------------ #
+    game = db.relationship("Game", back_populates="profile_games")
 
-    # ------------------------------------------------------------------ #
-    # Helpers                                                              #
-    # ------------------------------------------------------------------ #
-    def to_dict(self) -> dict:
-        """Serialise to a plain dict for JSON responses (e.g. reorder, search)."""
-        return {
-            "id":           self.id,
-            "name":         self.name,
-            "section":      self.section,
-            "status":       self.status,
-            "enjoyment":    self.enjoyment,
-            "motivation":   self.motivation,
-            "notes":        self.notes,
-            "rank":         self.rank,
-            "category_ids": [c.id for c in self.categories],
-            "rawg_id":          self.rawg_id,
-            "cover_url":        self.cover_url,
-            "release_year":     self.release_year,
-            "genres":           self.genres,
-            "platforms":        self.platforms,
-            "play_next_rank":   self.play_next_rank,
-            "hype":             self.hype,
-            "estimated_length": self.estimated_length,
-            "series_continuity":self.series_continuity,
-            "mood_chill":       self.mood_chill,
-            "mood_intense":     self.mood_intense,
-            "mood_story":       self.mood_story,
-            "mood_action":      self.mood_action,
-            "mood_exploration":  self.mood_exploration,
-            "finished":          self.finished,
-            "overall_rating":    self.overall_rating,
-            "would_play_again":  self.would_play_again,
-            "hours_to_finish":   self.hours_to_finish,
-            "difficulty":        self.difficulty,
-        }
+    # checkins relationship added in issue #47
+    # categories M2M relationship added in issue #46
 
     def __repr__(self) -> str:
-        return f"<Game {self.name!r} [{self.section}/{self.status}]>"
+        return f"<ProfileGame profile={self.profile_id!r} game={self.game_id} [{self.section}/{self.status}]>"
 
 
 class MoodPreferences(db.Model):
@@ -209,8 +165,6 @@ class CheckIn(db.Model):
     hours_played = db.Column(db.Numeric(5, 1), nullable=True)
     status       = db.Column(db.String(20),    nullable=True)
     created_at   = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
-    game = db.relationship("Game", back_populates="checkins")
 
     def __repr__(self) -> str:
         return f"<CheckIn game_id={self.game_id} at={self.created_at}>"
