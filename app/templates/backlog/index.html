@@ -36,17 +36,17 @@
 
   <!-- Actions -->
   <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-    <form method="post" action="{{ url_for('backlog.promote', game_id=game.id) }}">
+    <form method="post" action="{{ url_for('backlog.promote', pg_id=game.id) }}">
       <button type="submit"
               class="text-xs px-2.5 py-1 rounded bg-green-800 hover:bg-green-700 text-green-200 transition-colors">
         Play
       </button>
     </form>
-    <a href="{{ url_for('backlog.edit', game_id=game.id) }}"
+    <a href="{{ url_for('backlog.edit', pg_id=game.id) }}"
        class="text-xs px-2.5 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors">
       Edit
     </a>
-    <form method="post" action="{{ url_for('backlog.delete', game_id=game.id) }}"
+    <form method="post" action="{{ url_for('backlog.delete', pg_id=game.id) }}"
           onsubmit="return confirm('Remove {{ game.name }} from backlog?')">
       <button type="submit"
               class="text-xs px-2.5 py-1 rounded bg-gray-700 hover:bg-red-900 text-gray-400 hover:text-red-300 transition-colors">

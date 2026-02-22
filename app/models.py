@@ -124,6 +124,39 @@ class ProfileGame(db.Model):
     # checkins relationship added in issue #47
     # categories M2M relationship added in issue #46
 
+    # ------------------------------------------------------------------ #
+    # Proxy properties — delegate RAWG/identity fields to the Game row    #
+    # so templates use pg.name, pg.cover_url, etc. without changes.      #
+    # ------------------------------------------------------------------ #
+    @property
+    def name(self):
+        return self.game.name
+
+    @property
+    def cover_url(self):
+        return self.game.cover_url
+
+    @property
+    def release_year(self):
+        return self.game.release_year
+
+    @property
+    def genres(self):
+        return self.game.genres
+
+    @property
+    def platforms(self):
+        return self.game.platforms
+
+    @property
+    def rawg_id(self):
+        return self.game.rawg_id
+
+    @property
+    def categories(self):
+        # Placeholder until issue #46 adds per-profile M2M
+        return []
+
     def __repr__(self) -> str:
         return f"<ProfileGame profile={self.profile_id!r} game={self.game_id} [{self.section}/{self.status}]>"
 

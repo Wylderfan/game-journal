@@ -55,7 +55,7 @@
           {% endif %}
         </div>
       </div>
-      <form method="post" action="{{ url_for('backlog.promote', game_id=game.id) }}">
+      <form method="post" action="{{ url_for('backlog.promote', pg_id=game.id) }}">
         <button class="text-xs px-3 py-1.5 rounded bg-green-800 hover:bg-green-700 text-white transition-colors">
           Play
         </button>
