@@ -1,6 +1,6 @@
 # game-journal
 
-A personal, private game library journal built with Flask. Track games you're actively playing with enjoyment and motivation ratings, manage your backlog by category, and get a ranked play-next list driven by a per-game survey and your current category priorities.
+A personal, private game library journal built with Flask. Track games you're actively playing with timestamped check-ins, manage your backlog by category, and get a ranked play-next list driven by a per-game survey and your current mood preferences.
 
 Access is restricted entirely by Tailscale — no login system. If you're on the Tailnet, you can access the app.
 
@@ -8,31 +8,41 @@ Access is restricted entirely by Tailscale — no login system. If you're on the
 
 ## Features
 
+**Multiple Profiles**
+- Switch between named profiles from the nav bar (e.g. Player 1, Player 2)
+- Every game, category, check-in, and mood preference is scoped per profile
+- Profiles are defined in `.env` — no admin UI needed
+
 **Active Library**
 - Log games you're currently playing or have on hold
-- Rate enjoyment and motivation to finish (1–5 scale)
 - Track status: Playing, On Hold, Dropped, Completed
-- Add freeform notes per game
-- View archived (Dropped/Completed) games separately
+- View archived (Dropped/Completed) games in the same page
+- Log timestamped check-ins with hours played, a note, and optional status change
+- Fill out a finish survey when you complete a game (overall rating, difficulty, would-play-again, hours to finish)
 
 **Backlog Manager**
-- Organize unplayed games into user-defined categories
-- Rename categories in place
-- Games listed alphabetically within each category
+- Organize unplayed games into user-defined categories (many-to-many)
+- Games can belong to multiple categories
+- Drag categories to reorder their priority — higher-ranked categories get a scoring bonus
+- Rename and delete categories in place
 - One-click promote to active library
 
 **Play Next**
-- Cross-category ranked list of what to play next, updated dynamically
-- Score is computed from a per-game survey filled in at add time:
-  - Hype (1–5 stars), estimated length, series continuity bonus
+- Cross-category ranked list of what to play next
+- Includes both backlog games and currently active (Playing/On Hold) games
+- Score is computed from a per-game survey filled in at add/edit time:
+  - Hype (1–5 stars)
+  - Estimated length — Short/Medium/Long/Very Long
+  - Series continuity bonus
   - Mood blend — five sliders (Chill / Intense / Story / Action / Exploration)
-- Category priority order (drag to reorder on the Categories page) adds a bonus to every game in higher-priority categories
+- Category priority rank adds a bonus to every game in higher-priority categories
+- Per-profile mood preferences (set on the Categories page) are matched against each game's mood blend via a dot product
 - Playing games get a +30 bonus; On Hold games get a –15 penalty
-- Active (Playing / On Hold) games appear in the list alongside backlog games
+- All scoring weights are in `app/scoring.py` — edit to tune without touching routes
 
 **Dashboard**
-- At-a-glance stats: active game count, backlog size, completed count
-- Up Next widget showing the top 5 scored games with one-click promote
+- At-a-glance stats: playing count, on hold, backlog size, completed count
+- Up Next widget showing the top 5 scored games
 
 ---
 
@@ -59,24 +69,43 @@ Access is restricted entirely by Tailscale — no login system. If you're on the
 ```
 game-journal/
 ├── app/
-│   ├── __init__.py          # App factory, db init, blueprint registration
-│   ├── models.py            # SQLAlchemy models: Game, Category
+│   ├── __init__.py          # App factory, db init, blueprint + CLI registration
+│   ├── models.py            # SQLAlchemy models: Game, ProfileGame, Category, MoodPreferences, CheckIn
+│   ├── scoring.py           # Play-next scoring weights — edit to tune the algorithm
 │   ├── seeds.py             # flask seed CLI command
+│   ├── backup.py            # flask db-backup / db-restore CLI commands
 │   ├── blueprints/
-│   │   ├── main.py          # Dashboard (/) and RAWG search proxy
+│   │   ├── main.py          # Dashboard (/), profile switcher, RAWG search proxy
 │   │   ├── playing.py       # Active library routes (/playing)
 │   │   └── backlog.py       # Backlog routes (/backlog)
 │   ├── utils/
+│   │   ├── helpers.py       # current_profile(), _int(), _float()
 │   │   └── rawg.py          # RAWG API helpers
 │   ├── templates/
 │   │   ├── base.html        # Base template with nav and CDN links
+│   │   ├── macros.html      # Shared Jinja2 macros (star ratings, etc.)
+│   │   ├── errors/
+│   │   │   ├── 404.html
+│   │   │   └── 500.html
 │   │   ├── main/
+│   │   │   └── index.html   # Dashboard — stat cards + top 5 play next
 │   │   ├── playing/
+│   │   │   ├── index.html   # Active library — Playing, On Hold, Archived
+│   │   │   ├── detail.html  # Per-game detail with check-in form
+│   │   │   ├── form.html    # Edit form (survey + RAWG search)
+│   │   │   └── finish_survey.html
 │   │   └── backlog/
+│   │       ├── index.html   # Sortable category groups
+│   │       ├── add.html     # Add to backlog (RAWG search + survey + categories)
+│   │       ├── edit.html    # Edit backlog game (full survey editing)
+│   │       ├── play_next.html
+│   │       └── categories.html  # Manage categories + mood preferences
 │   └── static/
+├── backups/                 # Created by flask db-backup
 ├── deploy/
-│   └── game-journal.service # systemd unit template
-├── config.py                # DevelopmentConfig / ProductionConfig, loads from .env
+│   ├── game-journal.service # systemd unit template
+│   └── game-journal.openrc  # OpenRC init script template (Gentoo)
+├── config.py                # DevelopmentConfig / ProductionConfig, loads PROFILES
 ├── run.py                   # Entry point for local dev
 ├── requirements.txt
 └── .env                     # Secrets — never commit
@@ -122,6 +151,7 @@ FLASK_ENV=development
 RAWG_API_KEY=your-rawg-api-key        # from rawg.io/apidocs — free account
 TAILSCALE_IP=100.x.x.x                # from: tailscale ip -4
 PORT=5000
+PROFILES=Player 1,Player 2            # comma-separated; first is the default
 ```
 
 **3. Initialize the database**
@@ -136,10 +166,34 @@ flask shell
 flask seed
 ```
 
+> **Warning:** `flask seed` wipes all game and category data before re-inserting. Do not run it against a database with real data you want to keep.
+
 **5. Run locally**
 ```bash
 python run.py
 ```
+
+---
+
+## Database Backup & Restore
+
+The app includes CLI commands that wrap `mysqldump` and `mysql`:
+
+```bash
+# Dump to backups/<dbname>_<timestamp>.sql
+flask db-backup
+
+# Dump to a specific directory
+flask db-backup --output-dir /path/to/backups
+
+# Restore from a file (prompts for confirmation)
+flask db-restore backups/mydb_20260222_120000.sql
+
+# Restore without confirmation prompt
+flask db-restore backups/mydb_20260222_120000.sql --yes
+```
+
+Both commands read connection info from `DATABASE_URL` in `.env`.
 
 ---
 
