@@ -2,37 +2,28 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from app import db
 from app.models import Game, ProfileGame, Category, MoodPreferences
 from app.utils.helpers import _int, current_profile
+from app.scoring import (
+    HYPE_MULTIPLIER, SERIES_CONTINUITY_BONUS, LENGTH_SCORES,
+    CAT_RANK_MAX, CAT_RANK_STEP, MOOD_MAX_POINTS,
+    STATUS_PLAYING_BONUS, STATUS_ON_HOLD_PENALTY,
+)
 
 backlog_bp = Blueprint("backlog", __name__)
-
-# ------------------------------------------------------------------ #
-# Helpers                                                              #
-# ------------------------------------------------------------------ #
-
-_LENGTH_SCORES = {"Short": 20, "Medium": 10, "Long": 5, "Very Long": 0}
 
 
 def _play_next_score(pg, prefs=None):
     """
     Compute a priority score for play-next ordering (higher = play sooner).
-
-    Factors:
-      - Motivation & Excitement (1–5)   → 0–50 pts
-      - Series continuity bonus         → +25 pts
-      - Estimated length (shorter wins) → 0–20 pts
-      - Category rank bonus             → rank 1 = +30, rank 2 = +25 … rank 7+ = 0
-      - Mood match (dot product scaled) → 0–30 pts
-      - Status: Playing                 → +30 pts
-      - Status: On Hold                 → –15 pts
+    Weights are defined in app/scoring.py.
     """
-    score  = (pg.hype or 0) * 10
-    score += 25 if pg.series_continuity else 0
-    score += _LENGTH_SCORES.get(pg.estimated_length or "", 0)
+    score  = (pg.hype or 0) * HYPE_MULTIPLIER
+    score += SERIES_CONTINUITY_BONUS if pg.series_continuity else 0
+    score += LENGTH_SCORES.get(pg.estimated_length or "", 0)
 
     if pg.categories:
         best_rank = min((c.rank for c in pg.categories if c.rank), default=0)
         if best_rank:
-            score += max(0, 30 - (best_rank - 1) * 5)
+            score += max(0, CAT_RANK_MAX - (best_rank - 1) * CAT_RANK_STEP)
 
     if prefs:
         dot = (
@@ -42,13 +33,12 @@ def _play_next_score(pg, prefs=None):
             (pg.mood_action      or 0) * (prefs.mood_action      or 0) +
             (pg.mood_exploration or 0) * (prefs.mood_exploration or 0)
         )
-        # Max dot product = 5 dims × 5 × 5 = 125; scale to 0–30 pts
-        score += int((dot / 125) * 30)
+        score += int((dot / 125) * MOOD_MAX_POINTS)
 
     if pg.status == "Playing":
-        score += 30
+        score += STATUS_PLAYING_BONUS
     elif pg.status == "On Hold":
-        score -= 15
+        score -= STATUS_ON_HOLD_PENALTY
 
     return score
 
