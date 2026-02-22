@@ -1,4 +1,5 @@
 import os
+import click
 from flask import Flask, render_template, session
 from flask_sqlalchemy import SQLAlchemy
 from config import config
@@ -30,6 +31,12 @@ def create_app(config_name=None):
     from app.backup import backup_command, restore_command
     app.cli.add_command(backup_command)
     app.cli.add_command(restore_command)
+
+    @app.cli.command("init-db")
+    def init_db_command():
+        """Create database tables if they don't already exist."""
+        db.create_all()
+        click.echo("Database tables ready.")
 
     @app.context_processor
     def inject_profile():
