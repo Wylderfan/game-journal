@@ -19,6 +19,37 @@
        class="text-sm transition-colors {{ 'text-white font-medium' if request.path.startswith('/backlog') and not request.path.startswith('/backlog/play-next') else 'text-gray-400 hover:text-white' }}">Backlog</a>
     <a href="{{ url_for('backlog.play_next') }}"
        class="text-sm transition-colors {{ 'text-white font-medium' if request.path.startswith('/backlog/play-next') else 'text-gray-400 hover:text-white' }}">Play Next</a>
+
+    <!-- Profile switcher -->
+    {% if profiles | length > 1 %}
+    <div class="ml-auto relative" id="profile-menu">
+      <button type="button" onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')"
+              class="flex items-center gap-1.5 text-sm text-gray-300 hover:text-white transition-colors px-3 py-1 rounded bg-gray-800 hover:bg-gray-700">
+        <span>{{ current_profile }}</span>
+        <svg class="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+      <div id="profile-dropdown"
+           class="hidden absolute right-0 mt-1 w-40 bg-gray-800 border border-gray-700 rounded shadow-lg z-50">
+        {% for profile in profiles %}
+          {% if profile == current_profile %}
+            <p class="px-4 py-2 text-sm text-indigo-400 font-medium">{{ profile }} ✓</p>
+          {% else %}
+            <form method="post" action="{{ url_for('main.switch_profile') }}">
+              <input type="hidden" name="profile" value="{{ profile }}">
+              <button type="submit"
+                      class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+                {{ profile }}
+              </button>
+            </form>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <span class="ml-auto text-sm text-gray-600">{{ current_profile }}</span>
+    {% endif %}
   </nav>
 
   <main class="px-6 py-8 max-w-5xl mx-auto">
@@ -39,6 +70,14 @@
 
 {% block scripts %}
 <script>
+// Close profile dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('profile-menu');
+  if (menu && !menu.contains(e.target)) {
+    document.getElementById('profile-dropdown').classList.add('hidden');
+  }
+});
+
 // Star rating handler — shared across all pages with .star-btn elements.
 document.querySelectorAll('.star-btn').forEach(function(btn) {
   btn.addEventListener('click', function() {

@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, render_template, jsonify, request
+from flask import Blueprint, render_template, jsonify, request, session, redirect, current_app
 from app.models import Game, MoodPreferences
 
 main_bp = Blueprint("main", __name__)
@@ -31,6 +31,15 @@ def index():
         completed_count=completed_count,
         play_next=play_next,
     )
+
+
+@main_bp.route("/switch-profile", methods=["POST"])
+def switch_profile():
+    profiles = current_app.config["PROFILES"]
+    name = request.form.get("profile", "").strip()
+    if name in profiles:
+        session["profile"] = name
+    return redirect(request.referrer or "/")
 
 
 @main_bp.route("/api/games/search")
