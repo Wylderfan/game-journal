@@ -1,10 +1,12 @@
 #!/sbin/openrc-run
 
 name="game-journal"
-description="Game Journal"
+description="Game Journal Flask app"
 
+# IMPORTANT: Use absolute paths — tilde (~) is NOT expanded by OpenRC.
+# Example: directory="/home/connor/game-journal"
 directory="/path/to/game-journal"
-command="/path/to/game-journal/.venv/bin/gunicorn"
+command="${directory}/.venv/bin/gunicorn"
 command_args="-w 2 -b <tailscale-ip>:<port> \"app:create_app()\""
 command_user="<your-linux-user>"
 command_background=yes
@@ -15,6 +17,9 @@ depend() {
 }
 
 start_pre() {
-    # Load .env into the environment before gunicorn starts
-    export $(grep -v '^#' "${directory}/.env" | xargs)
+    # Source .env into the environment before gunicorn starts.
+    # 'set -a' exports every variable defined after it automatically.
+    set -a
+    . "${directory}/.env"
+    set +a
 }
