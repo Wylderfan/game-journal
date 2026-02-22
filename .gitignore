@@ -37,6 +37,9 @@ instance/
 *.sqlite
 *.sqlite3
 
+# DB backups (keep the directory, ignore the dumps)
+backups/*.sql
+
 # Logs
 *.log
 logs/

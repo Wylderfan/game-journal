@@ -27,6 +27,10 @@ def create_app(config_name=None):
     from app.seeds import seed_command
     app.cli.add_command(seed_command)
 
+    from app.backup import backup_command, restore_command
+    app.cli.add_command(backup_command)
+    app.cli.add_command(restore_command)
+
     @app.context_processor
     def inject_profile():
         profiles = app.config["PROFILES"]
