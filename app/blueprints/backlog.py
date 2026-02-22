@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
 from app import db
-from app.models import Game, Category, MoodPreferences
-from app.utils.helpers import _int
+from app.models import Game, ProfileGame, Category, MoodPreferences
+from app.utils.helpers import _int, current_profile
 
 backlog_bp = Blueprint("backlog", __name__)
 
@@ -12,7 +12,7 @@ backlog_bp = Blueprint("backlog", __name__)
 _LENGTH_SCORES = {"Short": 20, "Medium": 10, "Long": 5, "Very Long": 0}
 
 
-def _play_next_score(game, prefs=None):
+def _play_next_score(pg, prefs=None):
     """
     Compute a priority score for play-next ordering (higher = play sooner).
 
@@ -25,29 +25,29 @@ def _play_next_score(game, prefs=None):
       - Status: Playing                 → +30 pts
       - Status: On Hold                 → –15 pts
     """
-    score  = (game.hype or 0) * 10
-    score += 25 if game.series_continuity else 0
-    score += _LENGTH_SCORES.get(game.estimated_length or "", 0)
+    score  = (pg.hype or 0) * 10
+    score += 25 if pg.series_continuity else 0
+    score += _LENGTH_SCORES.get(pg.estimated_length or "", 0)
 
-    if game.categories:
-        best_rank = min((c.rank for c in game.categories if c.rank), default=0)
+    if pg.categories:
+        best_rank = min((c.rank for c in pg.categories if c.rank), default=0)
         if best_rank:
             score += max(0, 30 - (best_rank - 1) * 5)
 
     if prefs:
         dot = (
-            (game.mood_chill       or 0) * (prefs.mood_chill       or 0) +
-            (game.mood_intense     or 0) * (prefs.mood_intense     or 0) +
-            (game.mood_story       or 0) * (prefs.mood_story       or 0) +
-            (game.mood_action      or 0) * (prefs.mood_action      or 0) +
-            (game.mood_exploration or 0) * (prefs.mood_exploration or 0)
+            (pg.mood_chill       or 0) * (prefs.mood_chill       or 0) +
+            (pg.mood_intense     or 0) * (prefs.mood_intense     or 0) +
+            (pg.mood_story       or 0) * (prefs.mood_story       or 0) +
+            (pg.mood_action      or 0) * (prefs.mood_action      or 0) +
+            (pg.mood_exploration or 0) * (prefs.mood_exploration or 0)
         )
         # Max dot product = 5 dims × 5 × 5 = 125; scale to 0–30 pts
         score += int((dot / 125) * 30)
 
-    if game.status == "Playing":
+    if pg.status == "Playing":
         score += 30
-    elif game.status == "On Hold":
+    elif pg.status == "On Hold":
         score -= 15
 
     return score
@@ -59,12 +59,15 @@ def _play_next_score(game, prefs=None):
 
 @backlog_bp.route("/")
 def index():
+    profile = current_profile()
     categories = Category.query.order_by(Category.rank, Category.name).all()
-    has_games = Game.query.filter_by(section="backlog").count() > 0
+    categories = Category.query.order_by(Category.rank, Category.name).all()
+    has_games = ProfileGame.query.filter_by(profile_id=profile, section="backlog").count() > 0
     uncategorized = (
-        Game.query
-        .filter_by(section="backlog")
-        .filter(~Game.categories.any())
+        ProfileGame.query
+        .filter_by(profile_id=profile, section="backlog")
+        .filter(~ProfileGame.categories.any())
+        .join(ProfileGame.game)
         .order_by(Game.name)
         .all()
     )
@@ -78,6 +81,7 @@ def index():
 
 @backlog_bp.route("/add", methods=["GET", "POST"])
 def add():
+    profile = current_profile()
     categories = Category.query.order_by(Category.rank, Category.name).all()
 
     if request.method == "POST":
@@ -86,17 +90,38 @@ def add():
             flash("Game name is required.", "error")
             return redirect(url_for("backlog.add"))
 
-        game = Game(
-            name=name,
+        rawg_id = _int(request.form.get("rawg_id"))
+
+        # Reuse existing Game row if rawg_id already known; else create new one
+        if rawg_id:
+            game = Game.query.filter_by(rawg_id=rawg_id).first()
+        else:
+            game = None
+
+        if game is None:
+            game = Game(
+                name=name,
+                rawg_id=rawg_id,
+                cover_url=request.form.get("cover_url") or None,
+                release_year=_int(request.form.get("release_year")),
+                genres=request.form.get("genres") or None,
+                platforms=request.form.get("platforms") or None,
+            )
+            db.session.add(game)
+            db.session.flush()  # get game.id
+
+        # Duplicate check: has this profile already added this game?
+        existing = ProfileGame.query.filter_by(profile_id=profile, game_id=game.id).first()
+        if existing:
+            flash(f"'{game.name}' is already in your library.", "error")
+            return redirect(url_for("backlog.add"))
+
+        pg = ProfileGame(
+            profile_id=profile,
+            game_id=game.id,
             section="backlog",
             status=None,
             rank=0,
-            rawg_id=_int(request.form.get("rawg_id")),
-            cover_url=request.form.get("cover_url") or None,
-            release_year=_int(request.form.get("release_year")),
-            genres=request.form.get("genres") or None,
-            platforms=request.form.get("platforms") or None,
-            # Survey fields
             hype=_int(request.form.get("hype")),
             estimated_length=request.form.get("estimated_length") or None,
             series_continuity=bool(request.form.get("series_continuity")),
@@ -106,10 +131,11 @@ def add():
             mood_action=_int(request.form.get("mood_action")),
             mood_exploration=_int(request.form.get("mood_exploration")),
         )
-        db.session.add(game)
+        db.session.add(pg)
+        db.session.flush()  # get pg.id before assigning categories
         cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
         if cat_ids:
-            game.categories = Category.query.filter(Category.id.in_(cat_ids)).all()
+            pg.categories = Category.query.filter(Category.id.in_(cat_ids)).all()
 
         try:
             db.session.commit()
@@ -125,72 +151,80 @@ def add():
 
 @backlog_bp.route("/play-next")
 def play_next():
+    profile = current_profile()
     prefs = MoodPreferences.get()
-    # Backlog games + active games that are Playing or On Hold
-    backlog_games = Game.query.filter_by(section="backlog").all()
-    active_games = (
-        Game.query
-        .filter(Game.section == "active", Game.status.in_(["Playing", "On Hold"]))
+    backlog_pgs = ProfileGame.query.filter_by(profile_id=profile, section="backlog").all()
+    active_pgs = (
+        ProfileGame.query
+        .filter(
+            ProfileGame.profile_id == profile,
+            ProfileGame.section == "active",
+            ProfileGame.status.in_(["Playing", "On Hold"]),
+        )
         .all()
     )
-    ranked = sorted(backlog_games + active_games, key=lambda g: _play_next_score(g, prefs), reverse=True)
-    scores = {game.id: _play_next_score(game, prefs) for game in ranked}
+    ranked = sorted(backlog_pgs + active_pgs, key=lambda pg: _play_next_score(pg, prefs), reverse=True)
+    scores = {pg.id: _play_next_score(pg, prefs) for pg in ranked}
     return render_template("backlog/play_next.html", ranked=ranked, scores=scores)
 
 
-@backlog_bp.route("/<int:game_id>/edit", methods=["GET", "POST"])
-def edit(game_id):
-    game = db.get_or_404(Game, game_id)
+@backlog_bp.route("/<int:pg_id>/edit", methods=["GET", "POST"])
+def edit(pg_id):
+    profile = current_profile()
+    pg = ProfileGame.query.filter_by(id=pg_id, profile_id=profile, section="backlog").first_or_404()
     categories = Category.query.order_by(Category.rank, Category.name).all()
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         if not name:
             flash("Game name is required.", "error")
-            return redirect(url_for("backlog.edit", game_id=game_id))
+            return redirect(url_for("backlog.edit", pg_id=pg_id))
 
-        game.name              = name
-        game.notes             = request.form.get("notes", "").strip() or None
-        game.hype              = _int(request.form.get("hype"))
-        game.estimated_length  = request.form.get("estimated_length") or None
-        game.series_continuity = bool(request.form.get("series_continuity"))
-        game.mood_chill        = _int(request.form.get("mood_chill"))
-        game.mood_intense      = _int(request.form.get("mood_intense"))
-        game.mood_story        = _int(request.form.get("mood_story"))
-        game.mood_action       = _int(request.form.get("mood_action"))
-        game.mood_exploration  = _int(request.form.get("mood_exploration"))
-        # Only overwrite RAWG fields if the form sent something new
-        game.cover_url    = request.form.get("cover_url")    or game.cover_url
-        game.rawg_id      = _int(request.form.get("rawg_id")) or game.rawg_id
-        game.release_year = _int(request.form.get("release_year")) or game.release_year
-        game.genres       = request.form.get("genres")        or game.genres
-        game.platforms    = request.form.get("platforms")     or game.platforms
+        # Per-profile fields on ProfileGame
+        pg.notes             = request.form.get("notes", "").strip() or None
+        pg.hype              = _int(request.form.get("hype"))
+        pg.estimated_length  = request.form.get("estimated_length") or None
+        pg.series_continuity = bool(request.form.get("series_continuity"))
+        pg.mood_chill        = _int(request.form.get("mood_chill"))
+        pg.mood_intense      = _int(request.form.get("mood_intense"))
+        pg.mood_story        = _int(request.form.get("mood_story"))
+        pg.mood_action       = _int(request.form.get("mood_action"))
+        pg.mood_exploration  = _int(request.form.get("mood_exploration"))
+
+        # RAWG/identity fields on the shared Game row
+        pg.game.name         = name
+        pg.game.cover_url    = request.form.get("cover_url")    or pg.game.cover_url
+        pg.game.rawg_id      = _int(request.form.get("rawg_id")) or pg.game.rawg_id
+        pg.game.release_year = _int(request.form.get("release_year")) or pg.game.release_year
+        pg.game.genres       = request.form.get("genres")        or pg.game.genres
+        pg.game.platforms    = request.form.get("platforms")     or pg.game.platforms
 
         cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
-        game.categories = Category.query.filter(Category.id.in_(cat_ids)).all() if cat_ids else []
+        pg.categories = Category.query.filter(Category.id.in_(cat_ids)).all() if cat_ids else []
 
         try:
             db.session.commit()
-            flash(f"'{game.name}' updated.", "success")
+            flash(f"'{pg.name}' updated.", "success")
             return redirect(url_for("backlog.index"))
         except Exception:
             db.session.rollback()
             flash("Something went wrong. Please try again.", "error")
-            return redirect(url_for("backlog.edit", game_id=game_id))
+            return redirect(url_for("backlog.edit", pg_id=pg_id))
 
-    return render_template("backlog/edit.html", game=game, categories=categories)
+    return render_template("backlog/edit.html", game=pg, categories=categories)
 
 
-@backlog_bp.route("/<int:game_id>/promote", methods=["POST"])
-def promote(game_id):
-    game = db.get_or_404(Game, game_id)
-    game.section       = "active"
-    game.status        = "Playing"
-    game.rank          = 0
-    game.play_next_rank = None
+@backlog_bp.route("/<int:pg_id>/promote", methods=["POST"])
+def promote(pg_id):
+    profile = current_profile()
+    pg = ProfileGame.query.filter_by(id=pg_id, profile_id=profile).first_or_404()
+    pg.section        = "active"
+    pg.status         = "Playing"
+    pg.rank           = 0
+    pg.play_next_rank = None
     try:
         db.session.commit()
-        flash(f"'{game.name}' promoted to active library.", "success")
+        flash(f"'{pg.name}' promoted to active library.", "success")
         return redirect(url_for("playing.index"))
     except Exception:
         db.session.rollback()
@@ -198,11 +232,12 @@ def promote(game_id):
         return redirect(url_for("backlog.index"))
 
 
-@backlog_bp.route("/<int:game_id>/delete", methods=["POST"])
-def delete(game_id):
-    game = db.get_or_404(Game, game_id)
-    name = game.name
-    db.session.delete(game)
+@backlog_bp.route("/<int:pg_id>/delete", methods=["POST"])
+def delete(pg_id):
+    profile = current_profile()
+    pg = ProfileGame.query.filter_by(id=pg_id, profile_id=profile).first_or_404()
+    name = pg.name
+    db.session.delete(pg)
     try:
         db.session.commit()
         flash(f"'{name}' removed from backlog.", "success")

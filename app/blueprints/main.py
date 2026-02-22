@@ -1,27 +1,34 @@
 import os
 from flask import Blueprint, render_template, jsonify, request, session, redirect, current_app
-from app.models import Game, MoodPreferences
+from app.models import ProfileGame, MoodPreferences
+from app.utils.helpers import current_profile
 
 main_bp = Blueprint("main", __name__)
 
 
 @main_bp.route("/")
 def index():
-    playing_count   = Game.query.filter_by(section="active",  status="Playing").count()
-    on_hold_count   = Game.query.filter_by(section="active",  status="On Hold").count()
-    backlog_count   = Game.query.filter_by(section="backlog").count()
-    completed_count = Game.query.filter_by(status="Completed").count()
+    profile = current_profile()
+
+    playing_count   = ProfileGame.query.filter_by(profile_id=profile, section="active",  status="Playing").count()
+    on_hold_count   = ProfileGame.query.filter_by(profile_id=profile, section="active",  status="On Hold").count()
+    backlog_count   = ProfileGame.query.filter_by(profile_id=profile, section="backlog").count()
+    completed_count = ProfileGame.query.filter_by(profile_id=profile, status="Completed").count()
 
     # Top 5 games from the dynamic play-next scoring
     from app.blueprints.backlog import _play_next_score
     prefs = MoodPreferences.get()
-    backlog_games = Game.query.filter_by(section="backlog").all()
-    active_games = (
-        Game.query
-        .filter(Game.section == "active", Game.status.in_(["Playing", "On Hold"]))
+    backlog_pgs = ProfileGame.query.filter_by(profile_id=profile, section="backlog").all()
+    active_pgs = (
+        ProfileGame.query
+        .filter(
+            ProfileGame.profile_id == profile,
+            ProfileGame.section == "active",
+            ProfileGame.status.in_(["Playing", "On Hold"]),
+        )
         .all()
     )
-    play_next = sorted(backlog_games + active_games, key=lambda g: _play_next_score(g, prefs), reverse=True)[:5]
+    play_next = sorted(backlog_pgs + active_pgs, key=lambda pg: _play_next_score(pg, prefs), reverse=True)[:5]
 
     return render_template(
         "main/index.html",

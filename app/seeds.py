@@ -2,7 +2,7 @@ import os
 import click
 from flask.cli import with_appcontext
 from app import db
-from app.models import Category, Game
+from app.models import Category, Game, ProfileGame
 
 
 # RAWG genre categories in default rank order (user can reorder via the UI)
@@ -28,18 +28,18 @@ CATEGORIES = [
     "Educational",
 ]
 
-# (game data, category name)
-# Survey fields: hype (1-5), estimated_length, series_continuity,
-#                mood_chill/intense/story/action/exploration (0-5 each)
+# (game RAWG data, profile-specific data)
 BACKLOG_GAMES = [
     (
         {
             "name": "Baldur's Gate 3",
-            "section": "backlog",
-            "status": None,
             "genres": "RPG, Strategy",
             "platforms": "PC, PS5",
             "release_year": 2023,
+        },
+        {
+            "section": "backlog",
+            "status": None,
             "hype": 5,
             "estimated_length": "Very Long",
             "series_continuity": False,
@@ -48,17 +48,19 @@ BACKLOG_GAMES = [
             "mood_story": 5,
             "mood_action": 3,
             "mood_exploration": 4,
+            "rank": 0,
         },
-        "RPG",
     ),
     (
         {
             "name": "Hollow Knight",
-            "section": "backlog",
-            "status": None,
             "genres": "Action, Adventure, Indie",
             "platforms": "PC, Switch, PS4",
             "release_year": 2017,
+        },
+        {
+            "section": "backlog",
+            "status": None,
             "hype": 4,
             "estimated_length": "Medium",
             "series_continuity": False,
@@ -67,17 +69,19 @@ BACKLOG_GAMES = [
             "mood_story": 3,
             "mood_action": 3,
             "mood_exploration": 5,
+            "rank": 0,
         },
-        "Indie",
     ),
     (
         {
             "name": "Celeste",
-            "section": "backlog",
-            "status": None,
             "genres": "Platformer, Indie",
             "platforms": "PC, Switch, PS4",
             "release_year": 2018,
+        },
+        {
+            "section": "backlog",
+            "status": None,
             "hype": 5,
             "estimated_length": "Short",
             "series_continuity": False,
@@ -86,17 +90,19 @@ BACKLOG_GAMES = [
             "mood_story": 3,
             "mood_action": 3,
             "mood_exploration": 2,
+            "rank": 0,
         },
-        "Platformer",
     ),
     (
         {
             "name": "Ori and the Blind Forest",
-            "section": "backlog",
-            "status": None,
             "genres": "Platformer, Adventure",
             "platforms": "PC, Switch, Xbox One",
             "release_year": 2015,
+        },
+        {
+            "section": "backlog",
+            "status": None,
             "hype": 3,
             "estimated_length": "Short",
             "series_continuity": False,
@@ -105,17 +111,19 @@ BACKLOG_GAMES = [
             "mood_story": 4,
             "mood_action": 2,
             "mood_exploration": 3,
+            "rank": 0,
         },
-        "Platformer",
     ),
     (
         {
             "name": "Into the Breach",
-            "section": "backlog",
-            "status": None,
             "genres": "Strategy, Indie",
             "platforms": "PC, Switch",
             "release_year": 2018,
+        },
+        {
+            "section": "backlog",
+            "status": None,
             "hype": 3,
             "estimated_length": "Medium",
             "series_continuity": False,
@@ -124,8 +132,8 @@ BACKLOG_GAMES = [
             "mood_story": 1,
             "mood_action": 2,
             "mood_exploration": 1,
+            "rank": 0,
         },
-        "Strategy",
     ),
 ]
 
@@ -148,6 +156,10 @@ def _rawg_meta(name):
 @with_appcontext
 def seed_command():
     """Wipe and re-seed the database with example data."""
+    # Determine first profile name from env
+    profiles_env = os.environ.get("PROFILES", "Player 1")
+    first_profile = [p.strip() for p in profiles_env.split(",") if p.strip()][0]
+
     use_rawg = bool(os.environ.get("RAWG_API_KEY"))
     if use_rawg:
         click.echo("RAWG key found — cover art will be fetched.")
@@ -156,27 +168,28 @@ def seed_command():
 
     click.echo("Clearing existing data...")
     db.session.execute(db.text("SET FOREIGN_KEY_CHECKS=0"))
-    db.session.execute(db.text("DELETE FROM game_categories"))
+    db.session.execute(db.text("DELETE FROM profile_games"))
+    db.session.execute(db.text("DELETE FROM checkins"))
     Game.query.delete()
     Category.query.delete()
     db.session.execute(db.text("SET FOREIGN_KEY_CHECKS=1"))
     db.session.commit()
 
     click.echo("Creating categories...")
-    cats = {}
     for rank, name in enumerate(CATEGORIES, start=1):
-        c = Category(name=name, rank=rank)
-        db.session.add(c)
-        cats[name] = c
-    db.session.flush()
+        db.session.add(Category(name=name, rank=rank))
+    db.session.commit()
 
-    click.echo("Creating backlog games...")
-    for data, cat_name in BACKLOG_GAMES:
-        click.echo(f"  {data['name']}...")
-        meta = _rawg_meta(data["name"])
-        game = Game(**{**data, **meta, "rank": 0})
+    click.echo(f"Creating backlog games (profile: {first_profile!r})...")
+    for game_data, profile_data in BACKLOG_GAMES:
+        click.echo(f"  {game_data['name']}...")
+        meta = _rawg_meta(game_data["name"])
+        game = Game(**{**game_data, **meta})
         db.session.add(game)
-        game.categories = [cats[cat_name]]
+        db.session.flush()  # get game.id
+
+        pg = ProfileGame(profile_id=first_profile, game_id=game.id, **profile_data)
+        db.session.add(pg)
 
     db.session.commit()
     click.echo(f"Done. {len(BACKLOG_GAMES)} backlog games seeded.")

@@ -76,7 +76,7 @@
 
     <!-- Action -->
     {% if game.section == 'backlog' %}
-    <form method="post" action="{{ url_for('backlog.promote', game_id=game.id) }}" class="shrink-0">
+    <form method="post" action="{{ url_for('backlog.promote', pg_id=game.id) }}" class="shrink-0">
       <button type="submit"
               class="px-3 py-1 text-xs bg-green-800 hover:bg-green-700 rounded transition-colors"
               title="Promote to active library">
@@ -84,7 +84,7 @@
       </button>
     </form>
     {% else %}
-    <a href="{{ url_for('playing.detail', game_id=game.id) }}"
+    <a href="{{ url_for('playing.detail', pg_id=game.id) }}"
        class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors shrink-0">
       View
     </a>
