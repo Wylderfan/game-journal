@@ -144,10 +144,12 @@ class ProfileGame(db.Model):
         order_by="Category.rank",
     )
 
-    # checkins FK migrated to profile_game_id in issue #47
-    @property
-    def checkins(self):
-        return CheckIn.query.filter_by(game_id=self.game_id).order_by(CheckIn.created_at.desc()).all()
+    checkins = db.relationship(
+        "CheckIn",
+        back_populates="profile_game",
+        order_by="CheckIn.created_at.desc()",
+        cascade="all, delete-orphan",
+    )
 
     # ------------------------------------------------------------------ #
     # Proxy properties — delegate RAWG/identity fields to the Game row    #
@@ -207,10 +209,10 @@ class MoodPreferences(db.Model):
 class CheckIn(db.Model):
     __tablename__ = "checkins"
 
-    id           = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    game_id      = db.Column(
+    id              = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    profile_game_id = db.Column(
         db.Integer,
-        db.ForeignKey("games.id", ondelete="CASCADE"),
+        db.ForeignKey("profile_games.id", ondelete="CASCADE"),
         nullable=False,
     )
     motivation   = db.Column(db.Integer, nullable=True)    # 1–5
@@ -220,5 +222,7 @@ class CheckIn(db.Model):
     status       = db.Column(db.String(20),    nullable=True)
     created_at   = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
+    profile_game = db.relationship("ProfileGame", back_populates="checkins")
+
     def __repr__(self) -> str:
-        return f"<CheckIn game_id={self.game_id} at={self.created_at}>"
+        return f"<CheckIn profile_game_id={self.profile_game_id} at={self.created_at}>"

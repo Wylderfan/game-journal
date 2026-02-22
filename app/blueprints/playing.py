@@ -38,8 +38,7 @@ def index():
 def detail(pg_id):
     profile = current_profile()
     pg = ProfileGame.query.filter_by(id=pg_id, profile_id=profile).first_or_404()
-    checkins = CheckIn.query.filter_by(game_id=pg.game_id).order_by(CheckIn.created_at.desc()).all()
-    return render_template("playing/detail.html", game=pg, statuses=STATUSES, checkins=checkins)
+    return render_template("playing/detail.html", game=pg, statuses=STATUSES, checkins=pg.checkins)
 
 
 @playing_bp.route("/<int:pg_id>/edit", methods=["GET", "POST"])
@@ -112,9 +111,8 @@ def checkin(pg_id):
     new_status = request.form.get("status") or None
     new_hype   = _int(request.form.get("hype"))
 
-    # CheckIn still uses game_id FK until issue #47 migrates to profile_game_id
     checkin_obj = CheckIn(
-        game_id=pg.game_id,
+        profile_game_id=pg.id,
         note=request.form.get("note", "").strip() or None,
         hours_played=_float(request.form.get("hours_played")),
         status=new_status if new_status in STATUSES else None,
