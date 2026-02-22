@@ -14,10 +14,11 @@ profile_game_categories = db.Table(
 class Category(db.Model):
     __tablename__ = "categories"
 
-    id   = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String(100), nullable=False)
+    id         = db.Column(db.Integer,     primary_key=True, autoincrement=True)
+    profile_id = db.Column(db.String(100), nullable=False)
+    name       = db.Column(db.String(100), nullable=False)
     # Priority order for play-next scoring (1 = most interested in right now).
-    rank = db.Column(db.Integer, nullable=False, default=0)
+    rank       = db.Column(db.Integer,     nullable=False, default=0)
 
     profile_games = db.relationship(
         "ProfileGame",
@@ -181,22 +182,23 @@ class ProfileGame(db.Model):
 
 
 class MoodPreferences(db.Model):
-    """Singleton row storing the user's current mood-dimension weights for play-next scoring."""
+    """Per-profile mood-dimension weights for play-next scoring."""
     __tablename__ = "mood_preferences"
 
-    id               = db.Column(db.Integer, primary_key=True, default=1)
-    mood_chill       = db.Column(db.Integer, nullable=False, default=0)
-    mood_intense     = db.Column(db.Integer, nullable=False, default=0)
-    mood_story       = db.Column(db.Integer, nullable=False, default=0)
-    mood_action      = db.Column(db.Integer, nullable=False, default=0)
-    mood_exploration = db.Column(db.Integer, nullable=False, default=0)
+    id               = db.Column(db.Integer,     primary_key=True, autoincrement=True)
+    profile_id       = db.Column(db.String(100), nullable=False, unique=True)
+    mood_chill       = db.Column(db.Integer,     nullable=False, default=0)
+    mood_intense     = db.Column(db.Integer,     nullable=False, default=0)
+    mood_story       = db.Column(db.Integer,     nullable=False, default=0)
+    mood_action      = db.Column(db.Integer,     nullable=False, default=0)
+    mood_exploration = db.Column(db.Integer,     nullable=False, default=0)
 
     @classmethod
-    def get(cls):
-        """Return the singleton row, creating it if it doesn't exist."""
-        prefs = cls.query.first()
+    def get(cls, profile_id):
+        """Return the row for this profile, creating it if it doesn't exist."""
+        prefs = cls.query.filter_by(profile_id=profile_id).first()
         if prefs is None:
-            prefs = cls(id=1)
+            prefs = cls(profile_id=profile_id)
             db.session.add(prefs)
             db.session.commit()
         return prefs

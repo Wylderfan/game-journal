@@ -46,7 +46,7 @@ def detail(pg_id):
 def edit(pg_id):
     profile = current_profile()
     pg = ProfileGame.query.filter_by(id=pg_id, profile_id=profile).first_or_404()
-    categories = Category.query.order_by(Category.rank, Category.name).all()
+    categories = Category.query.filter_by(profile_id=profile).order_by(Category.rank, Category.name).all()
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -75,7 +75,7 @@ def edit(pg_id):
         pg.game.platforms    = request.form.get("platforms")    or pg.game.platforms
 
         cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
-        pg.categories = Category.query.filter(Category.id.in_(cat_ids)).all() if cat_ids else []
+        pg.categories = Category.query.filter(Category.id.in_(cat_ids), Category.profile_id == profile).all() if cat_ids else []
 
         try:
             db.session.commit()

@@ -17,7 +17,7 @@ def index():
 
     # Top 5 games from the dynamic play-next scoring
     from app.blueprints.backlog import _play_next_score
-    prefs = MoodPreferences.get()
+    prefs = MoodPreferences.get(profile)
     backlog_pgs = ProfileGame.query.filter_by(profile_id=profile, section="backlog").all()
     active_pgs = (
         ProfileGame.query
