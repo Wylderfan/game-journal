@@ -55,6 +55,32 @@
   {% else %}
   <p class="text-gray-500 text-sm">No categories yet.</p>
   {% endif %}
+
+  <!-- Mood Preferences -->
+  <div class="mt-10">
+    <h2 class="text-base font-semibold text-gray-300 mb-1">Mood Preferences</h2>
+    <p class="text-xs text-gray-500 mb-4">Set sliders to reflect your current mood — games that match score higher in Play Next.</p>
+    <form method="post" action="{{ url_for('backlog.save_mood_preferences') }}">
+      <div class="space-y-3">
+        {% for mood, label, color in [('chill', 'Chill', 'text-sky-400'), ('intense', 'Intense', 'text-red-400'),
+                                      ('story', 'Story', 'text-purple-400'), ('action', 'Action', 'text-orange-400'),
+                                      ('exploration', 'Exploration', 'text-green-400')] %}
+        <div class="flex items-center gap-3">
+          <span class="w-24 text-xs {{ color }} shrink-0">{{ label }}</span>
+          <input type="range" name="mood_{{ mood }}" id="pref_mood_{{ mood }}"
+                 min="0" max="5" value="{{ prefs['mood_' ~ mood] }}"
+                 class="flex-1 accent-indigo-500"
+                 oninput="document.getElementById('pref_mood_{{ mood }}_val').textContent = this.value">
+          <span id="pref_mood_{{ mood }}_val" class="w-4 text-xs text-gray-400 text-right shrink-0">{{ prefs['mood_' ~ mood] }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="submit"
+              class="mt-4 px-4 py-2 bg-indigo-700 hover:bg-indigo-600 rounded text-sm transition-colors">
+        Save preferences
+      </button>
+    </form>
+  </div>
 </div>
 
 <script>

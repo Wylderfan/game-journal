@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
 from app import db
-from app.models import Game, Category
+from app.models import Game, Category, MoodPreferences
 from app.utils.helpers import _int
 
 backlog_bp = Blueprint("backlog", __name__)
@@ -12,7 +12,7 @@ backlog_bp = Blueprint("backlog", __name__)
 _LENGTH_SCORES = {"Short": 20, "Medium": 10, "Long": 5, "Very Long": 0}
 
 
-def _play_next_score(game):
+def _play_next_score(game, prefs=None):
     """
     Compute a priority score for play-next ordering (higher = play sooner).
 
@@ -21,6 +21,7 @@ def _play_next_score(game):
       - Series continuity bonus         → +25 pts
       - Estimated length (shorter wins) → 0–20 pts
       - Category rank bonus             → rank 1 = +30, rank 2 = +25 … rank 7+ = 0
+      - Mood match (dot product scaled) → 0–30 pts
       - Status: Playing                 → +30 pts
       - Status: On Hold                 → –15 pts
     """
@@ -32,6 +33,17 @@ def _play_next_score(game):
         best_rank = min((c.rank for c in game.categories if c.rank), default=0)
         if best_rank:
             score += max(0, 30 - (best_rank - 1) * 5)
+
+    if prefs:
+        dot = (
+            (game.mood_chill       or 0) * (prefs.mood_chill       or 0) +
+            (game.mood_intense     or 0) * (prefs.mood_intense     or 0) +
+            (game.mood_story       or 0) * (prefs.mood_story       or 0) +
+            (game.mood_action      or 0) * (prefs.mood_action      or 0) +
+            (game.mood_exploration or 0) * (prefs.mood_exploration or 0)
+        )
+        # Max dot product = 5 dims × 5 × 5 = 125; scale to 0–30 pts
+        score += int((dot / 125) * 30)
 
     if game.status == "Playing":
         score += 30
@@ -113,6 +125,7 @@ def add():
 
 @backlog_bp.route("/play-next")
 def play_next():
+    prefs = MoodPreferences.get()
     # Backlog games + active games that are Playing or On Hold
     backlog_games = Game.query.filter_by(section="backlog").all()
     active_games = (
@@ -120,8 +133,8 @@ def play_next():
         .filter(Game.section == "active", Game.status.in_(["Playing", "On Hold"]))
         .all()
     )
-    ranked = sorted(backlog_games + active_games, key=_play_next_score, reverse=True)
-    scores = {game.id: _play_next_score(game) for game in ranked}
+    ranked = sorted(backlog_games + active_games, key=lambda g: _play_next_score(g, prefs), reverse=True)
+    scores = {game.id: _play_next_score(game, prefs) for game in ranked}
     return render_template("backlog/play_next.html", ranked=ranked, scores=scores)
 
 
@@ -215,7 +228,25 @@ def categories():
         return redirect(url_for("backlog.categories"))
 
     all_cats = Category.query.order_by(Category.rank, Category.name).all()
-    return render_template("backlog/categories.html", categories=all_cats)
+    prefs = MoodPreferences.get()
+    return render_template("backlog/categories.html", categories=all_cats, prefs=prefs)
+
+
+@backlog_bp.route("/categories/mood-preferences", methods=["POST"])
+def save_mood_preferences():
+    prefs = MoodPreferences.get()
+    prefs.mood_chill       = _int(request.form.get("mood_chill"))       or 0
+    prefs.mood_intense     = _int(request.form.get("mood_intense"))     or 0
+    prefs.mood_story       = _int(request.form.get("mood_story"))       or 0
+    prefs.mood_action      = _int(request.form.get("mood_action"))      or 0
+    prefs.mood_exploration = _int(request.form.get("mood_exploration")) or 0
+    try:
+        db.session.commit()
+        flash("Mood preferences saved.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Could not save mood preferences.", "error")
+    return redirect(url_for("backlog.categories"))
 
 
 @backlog_bp.route("/categories/reorder", methods=["POST"])

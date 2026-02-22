@@ -172,6 +172,28 @@ class Game(db.Model):
         return f"<Game {self.name!r} [{self.section}/{self.status}]>"
 
 
+class MoodPreferences(db.Model):
+    """Singleton row storing the user's current mood-dimension weights for play-next scoring."""
+    __tablename__ = "mood_preferences"
+
+    id               = db.Column(db.Integer, primary_key=True, default=1)
+    mood_chill       = db.Column(db.Integer, nullable=False, default=0)
+    mood_intense     = db.Column(db.Integer, nullable=False, default=0)
+    mood_story       = db.Column(db.Integer, nullable=False, default=0)
+    mood_action      = db.Column(db.Integer, nullable=False, default=0)
+    mood_exploration = db.Column(db.Integer, nullable=False, default=0)
+
+    @classmethod
+    def get(cls):
+        """Return the singleton row, creating it if it doesn't exist."""
+        prefs = cls.query.first()
+        if prefs is None:
+            prefs = cls(id=1)
+            db.session.add(prefs)
+            db.session.commit()
+        return prefs
+
+
 class CheckIn(db.Model):
     __tablename__ = "checkins"
 

@@ -1,6 +1,6 @@
 import os
 from flask import Blueprint, render_template, jsonify, request
-from app.models import Game
+from app.models import Game, MoodPreferences
 
 main_bp = Blueprint("main", __name__)
 
@@ -14,13 +14,14 @@ def index():
 
     # Top 5 games from the dynamic play-next scoring
     from app.blueprints.backlog import _play_next_score
+    prefs = MoodPreferences.get()
     backlog_games = Game.query.filter_by(section="backlog").all()
     active_games = (
         Game.query
         .filter(Game.section == "active", Game.status.in_(["Playing", "On Hold"]))
         .all()
     )
-    play_next = sorted(backlog_games + active_games, key=_play_next_score, reverse=True)[:5]
+    play_next = sorted(backlog_games + active_games, key=lambda g: _play_next_score(g, prefs), reverse=True)[:5]
 
     return render_template(
         "main/index.html",
