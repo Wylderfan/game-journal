@@ -61,18 +61,19 @@ def _play_next_score(pg, prefs=None):
 def index():
     profile = current_profile()
     categories = Category.query.order_by(Category.rank, Category.name).all()
+    categories = Category.query.order_by(Category.rank, Category.name).all()
     has_games = ProfileGame.query.filter_by(profile_id=profile, section="backlog").count() > 0
-    # All backlog games shown as uncategorized until #46 restores per-profile M2M
     uncategorized = (
         ProfileGame.query
         .filter_by(profile_id=profile, section="backlog")
+        .filter(~ProfileGame.categories.any())
         .join(ProfileGame.game)
         .order_by(Game.name)
         .all()
     )
     return render_template(
         "backlog/index.html",
-        categories=[],          # category grouping restored in #46
+        categories=categories,
         uncategorized=uncategorized,
         has_games=has_games,
     )
@@ -131,6 +132,10 @@ def add():
             mood_exploration=_int(request.form.get("mood_exploration")),
         )
         db.session.add(pg)
+        db.session.flush()  # get pg.id before assigning categories
+        cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
+        if cat_ids:
+            pg.categories = Category.query.filter(Category.id.in_(cat_ids)).all()
 
         try:
             db.session.commit()
@@ -193,6 +198,9 @@ def edit(pg_id):
         pg.game.release_year = _int(request.form.get("release_year")) or pg.game.release_year
         pg.game.genres       = request.form.get("genres")        or pg.game.genres
         pg.game.platforms    = request.form.get("platforms")     or pg.game.platforms
+
+        cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
+        pg.categories = Category.query.filter(Category.id.in_(cat_ids)).all() if cat_ids else []
 
         try:
             db.session.commit()

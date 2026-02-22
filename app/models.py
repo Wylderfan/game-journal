@@ -4,6 +4,13 @@ from app import db
 STATUSES = ["Playing", "On Hold", "Dropped", "Completed"]
 
 
+profile_game_categories = db.Table(
+    "profile_game_categories",
+    db.Column("profile_game_id", db.Integer, db.ForeignKey("profile_games.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("category_id",     db.Integer, db.ForeignKey("categories.id",     ondelete="CASCADE"), primary_key=True),
+)
+
+
 class Category(db.Model):
     __tablename__ = "categories"
 
@@ -11,6 +18,13 @@ class Category(db.Model):
     name = db.Column(db.String(100), nullable=False)
     # Priority order for play-next scoring (1 = most interested in right now).
     rank = db.Column(db.Integer, nullable=False, default=0)
+
+    profile_games = db.relationship(
+        "ProfileGame",
+        secondary="profile_game_categories",
+        back_populates="categories",
+        order_by="ProfileGame.rank",
+    )
 
     def __repr__(self) -> str:
         return f"<Category {self.name!r}>"
@@ -121,8 +135,18 @@ class ProfileGame(db.Model):
     # ------------------------------------------------------------------ #
     game = db.relationship("Game", back_populates="profile_games")
 
-    # checkins relationship added in issue #47
-    # categories M2M relationship added in issue #46
+    # categories M2M via profile_game_categories join table
+    categories = db.relationship(
+        "Category",
+        secondary="profile_game_categories",
+        back_populates="profile_games",
+        order_by="Category.rank",
+    )
+
+    # checkins FK migrated to profile_game_id in issue #47
+    @property
+    def checkins(self):
+        return CheckIn.query.filter_by(game_id=self.game_id).order_by(CheckIn.created_at.desc()).all()
 
     # ------------------------------------------------------------------ #
     # Proxy properties — delegate RAWG/identity fields to the Game row    #
@@ -151,11 +175,6 @@ class ProfileGame(db.Model):
     @property
     def rawg_id(self):
         return self.game.rawg_id
-
-    @property
-    def categories(self):
-        # Placeholder until issue #46 adds per-profile M2M
-        return []
 
     def __repr__(self) -> str:
         return f"<ProfileGame profile={self.profile_id!r} game={self.game_id} [{self.section}/{self.status}]>"

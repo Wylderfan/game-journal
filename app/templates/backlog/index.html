@@ -65,7 +65,7 @@
 {% endif %}
 
 {% for cat in categories %}
-  {% set backlog_games = cat.games | selectattr('section', 'equalto', 'backlog') | list %}
+  {% set backlog_games = cat.profile_games | selectattr('profile_id', 'equalto', current_profile) | selectattr('section', 'equalto', 'backlog') | list %}
   {% if backlog_games %}
   <section class="mb-8">
     <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{{ cat.name }}</h2>

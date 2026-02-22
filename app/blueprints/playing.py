@@ -74,6 +74,9 @@ def edit(pg_id):
         pg.game.genres       = request.form.get("genres")       or pg.game.genres
         pg.game.platforms    = request.form.get("platforms")    or pg.game.platforms
 
+        cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
+        pg.categories = Category.query.filter(Category.id.in_(cat_ids)).all() if cat_ids else []
+
         try:
             db.session.commit()
             flash(f"'{pg.name}' updated.", "success")
