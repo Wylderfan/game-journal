@@ -1,0 +1,7 @@
+services:
+  game-journal:
+    build: .
+    env_file: .env
+    ports:
+      - "${TAILSCALE_IP}:${PORT:-5000}:5000"
+    restart: unless-stopped
