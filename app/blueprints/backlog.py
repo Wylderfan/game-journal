@@ -60,8 +60,7 @@ def _play_next_score(pg, prefs=None):
 @backlog_bp.route("/")
 def index():
     profile = current_profile()
-    categories = Category.query.order_by(Category.rank, Category.name).all()
-    categories = Category.query.order_by(Category.rank, Category.name).all()
+    categories = Category.query.filter_by(profile_id=profile).order_by(Category.rank, Category.name).all()
     has_games = ProfileGame.query.filter_by(profile_id=profile, section="backlog").count() > 0
     uncategorized = (
         ProfileGame.query
@@ -82,7 +81,7 @@ def index():
 @backlog_bp.route("/add", methods=["GET", "POST"])
 def add():
     profile = current_profile()
-    categories = Category.query.order_by(Category.rank, Category.name).all()
+    categories = Category.query.filter_by(profile_id=profile).order_by(Category.rank, Category.name).all()
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -135,7 +134,7 @@ def add():
         db.session.flush()  # get pg.id before assigning categories
         cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
         if cat_ids:
-            pg.categories = Category.query.filter(Category.id.in_(cat_ids)).all()
+            pg.categories = Category.query.filter(Category.id.in_(cat_ids), Category.profile_id == profile).all()
 
         try:
             db.session.commit()
@@ -152,7 +151,7 @@ def add():
 @backlog_bp.route("/play-next")
 def play_next():
     profile = current_profile()
-    prefs = MoodPreferences.get()
+    prefs = MoodPreferences.get(profile)
     backlog_pgs = ProfileGame.query.filter_by(profile_id=profile, section="backlog").all()
     active_pgs = (
         ProfileGame.query
@@ -172,7 +171,7 @@ def play_next():
 def edit(pg_id):
     profile = current_profile()
     pg = ProfileGame.query.filter_by(id=pg_id, profile_id=profile, section="backlog").first_or_404()
-    categories = Category.query.order_by(Category.rank, Category.name).all()
+    categories = Category.query.filter_by(profile_id=profile).order_by(Category.rank, Category.name).all()
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -200,7 +199,7 @@ def edit(pg_id):
         pg.game.platforms    = request.form.get("platforms")     or pg.game.platforms
 
         cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
-        pg.categories = Category.query.filter(Category.id.in_(cat_ids)).all() if cat_ids else []
+        pg.categories = Category.query.filter(Category.id.in_(cat_ids), Category.profile_id == profile).all() if cat_ids else []
 
         try:
             db.session.commit()
@@ -249,11 +248,12 @@ def delete(pg_id):
 
 @backlog_bp.route("/categories", methods=["GET", "POST"])
 def categories():
+    profile = current_profile()
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         if name:
-            max_rank = db.session.query(db.func.max(Category.rank)).scalar() or 0
-            db.session.add(Category(name=name, rank=max_rank + 1))
+            max_rank = db.session.query(db.func.max(Category.rank)).filter(Category.profile_id == profile).scalar() or 0
+            db.session.add(Category(name=name, rank=max_rank + 1, profile_id=profile))
             try:
                 db.session.commit()
                 flash(f"Category '{name}' created.", "success")
@@ -262,14 +262,15 @@ def categories():
                 flash("Could not create category. Please try again.", "error")
         return redirect(url_for("backlog.categories"))
 
-    all_cats = Category.query.order_by(Category.rank, Category.name).all()
-    prefs = MoodPreferences.get()
+    all_cats = Category.query.filter_by(profile_id=profile).order_by(Category.rank, Category.name).all()
+    prefs = MoodPreferences.get(profile)
     return render_template("backlog/categories.html", categories=all_cats, prefs=prefs)
 
 
 @backlog_bp.route("/categories/mood-preferences", methods=["POST"])
 def save_mood_preferences():
-    prefs = MoodPreferences.get()
+    profile = current_profile()
+    prefs = MoodPreferences.get(profile)
     prefs.mood_chill       = _int(request.form.get("mood_chill"))       or 0
     prefs.mood_intense     = _int(request.form.get("mood_intense"))     or 0
     prefs.mood_story       = _int(request.form.get("mood_story"))       or 0
@@ -287,13 +288,14 @@ def save_mood_preferences():
 @backlog_bp.route("/categories/reorder", methods=["POST"])
 def categories_reorder():
     """Receives an ordered list of category IDs and updates their rank fields."""
+    profile = current_profile()
     data = request.get_json(silent=True)
     if not data or not isinstance(data, list):
         return jsonify({"error": "invalid payload"}), 400
 
     try:
         for rank, cat_id in enumerate(data, start=1):
-            Category.query.filter_by(id=cat_id).update({"rank": rank})
+            Category.query.filter_by(id=cat_id, profile_id=profile).update({"rank": rank})
         db.session.commit()
         return jsonify({"ok": True})
     except Exception:
@@ -303,7 +305,8 @@ def categories_reorder():
 
 @backlog_bp.route("/categories/<int:cat_id>/rename", methods=["POST"])
 def rename_category(cat_id):
-    cat = db.get_or_404(Category, cat_id)
+    profile = current_profile()
+    cat = Category.query.filter_by(id=cat_id, profile_id=profile).first_or_404()
     name = request.form.get("name", "").strip()
     if name:
         cat.name = name
@@ -318,7 +321,8 @@ def rename_category(cat_id):
 
 @backlog_bp.route("/categories/<int:cat_id>/delete", methods=["POST"])
 def delete_category(cat_id):
-    cat = db.get_or_404(Category, cat_id)
+    profile = current_profile()
+    cat = Category.query.filter_by(id=cat_id, profile_id=profile).first_or_404()
     name = cat.name
     db.session.delete(cat)
     try:

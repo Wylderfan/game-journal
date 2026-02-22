@@ -177,7 +177,7 @@ def seed_command():
 
     click.echo("Creating categories...")
     for rank, name in enumerate(CATEGORIES, start=1):
-        db.session.add(Category(name=name, rank=rank))
+        db.session.add(Category(name=name, rank=rank, profile_id=first_profile))
     db.session.commit()
 
     click.echo(f"Creating backlog games (profile: {first_profile!r})...")
