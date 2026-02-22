@@ -154,7 +154,7 @@ def edit(game_id):
         game.platforms    = request.form.get("platforms")     or game.platforms
 
         cat_ids = [_int(v) for v in request.form.getlist("category_ids") if v]
-        game.category_id = cat_ids[0] if cat_ids else None
+        game.categories = Category.query.filter(Category.id.in_(cat_ids)).all() if cat_ids else []
 
         try:
             db.session.commit()

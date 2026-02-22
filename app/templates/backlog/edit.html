@@ -49,7 +49,7 @@
           <label class="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" name="category_ids" value="{{ cat.id }}"
                    data-genre="{{ cat.name }}"
-                   {{ 'checked' if game.category_id == cat.id }}
+                   {{ 'checked' if cat in game.categories }}
                    class="w-4 h-4 accent-indigo-500">
             <span class="text-sm text-gray-300">{{ cat.name }}</span>
           </label>
