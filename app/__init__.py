@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, session
 from flask_sqlalchemy import SQLAlchemy
 from config import config
 
@@ -26,6 +26,14 @@ def create_app(config_name=None):
 
     from app.seeds import seed_command
     app.cli.add_command(seed_command)
+
+    @app.context_processor
+    def inject_profile():
+        profiles = app.config["PROFILES"]
+        current = session.get("profile")
+        if current not in profiles:
+            current = profiles[0]
+        return {"current_profile": current, "profiles": profiles}
 
     @app.errorhandler(404)
     def not_found(e):
